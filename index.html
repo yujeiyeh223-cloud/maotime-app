@@ -389,7 +389,7 @@ textarea{resize:none;line-height:1.5}
       </div>
       <div>
         <div class="brand-name">卯時設計有限公司</div>
-        <div class="brand-sub">套量服外借管理系統 v9</div>
+        <div class="brand-sub">套量服外借管理系統 v10</div>
       </div>
     </div>
   </div>
@@ -1048,6 +1048,24 @@ callAPI({action:'getInventory'}, r => {
   if(r && r.items){ inventory = r.items; }
   refreshStats();
 });
+
+// Service Worker：自動偵測更新
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('/maotime-app/sw.js').then(reg=>{
+    reg.addEventListener('updatefound',()=>{
+      const newSW = reg.installing;
+      newSW.addEventListener('statechange',()=>{
+        if(newSW.state==='installed' && navigator.serviceWorker.controller){
+          // 有新版本，自動重新整理
+          newSW.postMessage({action:'skipWaiting'});
+        }
+      });
+    });
+  });
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{
+    window.location.reload();
+  });
+}
 </script>
 </body>
 </html>
