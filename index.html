@@ -389,7 +389,7 @@ textarea{resize:none;line-height:1.5}
       </div>
       <div>
         <div class="brand-name">卯時設計有限公司</div>
-        <div class="brand-sub">套量服外借管理系統</div>
+        <div class="brand-sub">套量服外借管理系統 v8</div>
       </div>
     </div>
   </div>
@@ -977,15 +977,18 @@ function hasSig(id){
 
 // ===================== UTILS =====================
 async function uploadSigInChunks(recordId, sigData) {
-  const CHUNK = 50000; // 每段 50000 字元
-  const total = Math.ceil(sigData.length / CHUNK);
-  for(let i = 0; i < total; i++){
-    const chunk = sigData.substring(i * CHUNK, (i+1) * CHUNK);
-    const ok = await callAPIAsync({
-      action: 'uploadSigChunk',
-      recordId, chunk, index: i, total
+  // 用 POST 直接傳送簽名，不受 URL 長度限制
+  try {
+    const r = await fetch(GAS_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ recordId, sigData })
     });
-    if(!ok || !ok.success){ console.warn('簽名上傳失敗 chunk', i); return; }
+    // no-cors 模式下無法讀取回應，但資料會送出
+    console.log('簽名已送出');
+  } catch(e) {
+    console.warn('簽名上傳失敗：', e);
   }
 }
 
