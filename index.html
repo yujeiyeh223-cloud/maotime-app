@@ -174,7 +174,7 @@ body{
   color:var(--text-primary);font-weight:600;
 }
 
-#borrow-reader-wrap, #return-reader-wrap{min-height:160px;max-height:180px;overflow:hidden}
+#borrow-reader-wrap, #return-reader-wrap{min-height:220px;max-height:260px;overflow:hidden}
 .no-cam-msg{
   padding:32px 16px;text-align:center;font-size:13px;
   color:var(--text-secondary);line-height:1.7;
@@ -707,7 +707,7 @@ function stopAll() {
 
 function startScanner(divId, onResult) {
   const s = new Html5Qrcode(divId);
-  s.start({facingMode:'environment'},{fps:10,qrbox:{width:200,height:100},aspectRatio:1.5},
+  s.start({facingMode:'environment'},{fps:10,qrbox:{width:180,height:180},aspectRatio:1.0},
     text=>{ onResult(text.trim()); s.stop(); },
     ()=>{}
   ).catch(()=>{
