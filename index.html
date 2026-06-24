@@ -174,7 +174,7 @@ body{
   color:var(--text-primary);font-weight:600;
 }
 
-#borrow-reader-wrap, #return-reader-wrap{min-height:220px;max-height:260px;overflow:hidden}
+#borrow-reader-wrap, #return-reader-wrap{min-height:240px;max-height:320px;overflow:hidden}
 .no-cam-msg{
   padding:32px 16px;text-align:center;font-size:13px;
   color:var(--text-secondary);line-height:1.7;
@@ -443,11 +443,7 @@ textarea{resize:none;line-height:1.5}
       <span class="btn-arrow">›</span>
     </button>
 
-    <div class="notice-box" id="config-notice">
-      <strong>⚙️ 尚未連接後端試算表</strong>
-      請在此檔案頂端的 <code>GAS_URL</code> 填入您的 Google Apps Script 部署網址，即可啟用自動同步功能。<br>
-      <span class="notice-link" onclick="sendToGAS()">→ 測試 API 連線</span>
-    </div>
+
   </div>
 
   <!-- ===== BORROW PAGE ===== -->
@@ -662,16 +658,8 @@ textarea{resize:none;line-height:1.5}
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbxFjRU0iMA-XmUFUxp2q8-W1-iQd6XF6HpMCeENCbGRnzO_6w2nPpsctWNWxH1k0Y7y3w/exec';
 
 // ===================== DEMO DATA =====================
-let inventory = [
-  {id:'MS-POLO-001',name:'Polo 衫 / 白 / M',status:'in',staff:'',client:'',borrowDate:'',dueDate:''},
-  {id:'MS-POLO-002',name:'Polo 衫 / 白 / L',status:'out',staff:'王小明',client:'台灣紡織股份有限公司',borrowDate:'2025-06-18',dueDate:'2025-06-25'},
-  {id:'MS-POLO-003',name:'Polo 衫 / 黑 / M',status:'in',staff:'',client:'',borrowDate:'',dueDate:''},
-  {id:'MS-JACKET-001',name:'夾克 / 深藍 / L',status:'out',staff:'陳美玲',client:'美達服飾有限公司',borrowDate:'2025-06-15',dueDate:'2025-06-22'},
-  {id:'MS-JACKET-002',name:'夾克 / 深藍 / XL',status:'in',staff:'',client:'',borrowDate:'',dueDate:''},
-  {id:'MS-TEE-001',name:'T 恤 / 灰 / S',status:'in',staff:'',client:'',borrowDate:'',dueDate:''},
-  {id:'MS-TEE-002',name:'T 恤 / 灰 / M',status:'out',staff:'林大偉',client:'晶晶製衣廠',borrowDate:'2025-06-20',dueDate:'2025-06-27'},
-  {id:'MS-TEE-003',name:'T 恤 / 灰 / L',status:'in',staff:'',client:'',borrowDate:'',dueDate:''},
-];
+let inventory = [];
+
 
 // ===================== STATE =====================
 let scannedBId = null, scannedRId = null;
@@ -707,7 +695,7 @@ function stopAll() {
 
 function startScanner(divId, onResult) {
   const s = new Html5Qrcode(divId);
-  s.start({facingMode:'environment'},{fps:10,qrbox:{width:180,height:180},aspectRatio:1.0},
+  s.start({facingMode:'environment'},{fps:15,qrbox:function(w,h){const s=Math.min(w,h)*0.7;return{width:s,height:s}},aspectRatio:1.0},
     text=>{ onResult(text.trim()); s.stop(); },
     ()=>{}
   ).catch(()=>{
@@ -962,7 +950,12 @@ function sendToGAS(){
 }
 
 // ===================== INIT =====================
-refreshStats();
+document.getElementById('stat-in').textContent = '…';
+document.getElementById('stat-out').textContent = '…';
+callAPI({action:'getInventory'}, r => {
+  if(r && r.items){ inventory = r.items; }
+  refreshStats();
+});
 </script>
 </body>
 </html>
