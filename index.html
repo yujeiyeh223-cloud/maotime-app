@@ -223,7 +223,7 @@ body{
 .field-group{display:flex;flex-direction:column;gap:6px}
 .field-label{font-size:11px;font-weight:700;color:var(--text-secondary);letter-spacing:0.05em;text-transform:uppercase}
 
-input[type=text],input[type=date],select,textarea{
+input[type=text],input[type=date],input[type=tel],select,textarea{
   width:100%;padding:11px 13px;border-radius:10px;
   border:1px solid var(--border-light);background:var(--bg-secondary);
   font-size:15px;color:var(--text-primary);font-family:inherit;outline:none;
@@ -775,7 +775,6 @@ function submitBorrow() {
   if(!client){showAlert('請填寫借用客戶名稱');return;}
   if(!phone){showAlert('請填寫客戶聯絡電話');return;}
   if(!due){showAlert('請選擇預計歸還日期');return;}
-  if(!hasSig('b-sig')){showAlert('請完成借用人手寫簽名');return;}
 
   const sigData = document.getElementById('b-sig').toDataURL('image/png');
   const bDate = today();
@@ -957,17 +956,13 @@ async function callAPI(payload, cb){
     const action = payload.action;
     const dataCopy = Object.assign({}, payload);
     delete dataCopy.action;
-
-    // 簽名圖片太大不能放 URL，單獨處理
-    const signature = dataCopy.signature || '';
-    delete dataCopy.signature;
+    delete dataCopy.signature; // 簽名不透過 URL 傳送，避免超長
 
     const encoded = encodeURIComponent(JSON.stringify(dataCopy));
-    const sigEncoded = signature ? encodeURIComponent(signature.substring(0, 50000)) : '';
-    const url = GAS_URL + '?action=' + action + '&data=' + encoded + (sigEncoded ? '&sig=' + sigEncoded : '');
-
+    const url = GAS_URL + '?action=' + action + '&data=' + encoded;
     const r = await fetch(url);
-    const d = await r.json();
+    const text = await r.text();
+    const d = JSON.parse(text);
     if(cb)cb(d);
   }catch(e){ console.warn('API error:',e); if(cb)cb(null); }
 }
