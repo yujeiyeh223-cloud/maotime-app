@@ -944,14 +944,20 @@ function showAlert(msg){ alert(msg); }
 async function callAPI(payload,cb){
   if(!GAS_URL){ if(cb)cb(null); return; }
   try{
-    const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify(payload),headers:{'Content-Type':'application/json'}});
-    const d=await r.json(); if(cb)cb(d);
+    const action = payload.action;
+    const dataCopy = Object.assign({}, payload);
+    delete dataCopy.action;
+    const encoded = encodeURIComponent(JSON.stringify(dataCopy));
+    const url = GAS_URL + '?action=' + action + '&data=' + encoded;
+    const r = await fetch(url);
+    const d = await r.json();
+    if(cb)cb(d);
   }catch(e){ console.warn('API error:',e); if(cb)cb(null); }
 }
 
 function sendToGAS(){
   if(!GAS_URL){showAlert('請先在 HTML 檔案中填入 GAS_URL！');return;}
-  callAPI({action:'getInventory'},r=>{ showAlert(r?'✅ 連線成功！\n共 '+r.items?.length+' 件衣服':'❌ 連線失敗，請確認部署設定'); });
+  callAPI({action:'ping'},r=>{ showAlert(r&&r.success?'✅ 連線成功！\n'+r.message:'❌ 連線失敗，請確認部署設定'); });
 }
 
 // ===================== INIT =====================
