@@ -495,7 +495,16 @@ textarea{resize:none;line-height:1.5}
     <div class="form-card" id="b-form">
       <div class="field-group">
         <label class="field-label">借出業務</label>
-        <input type="text" id="b-staff" placeholder="請輸入業務姓名" autocomplete="name">
+        <select id="b-staff">
+          <option value="">— 請選擇業務 —</option>
+          <option value="YuHsuan">YuHsuan</option>
+          <option value="Minzu">Minzu</option>
+          <option value="CM">CM</option>
+          <option value="CY">CY</option>
+          <option value="MM">MM</option>
+          <option value="WL">WL</option>
+          <option value="YJY">YJY</option>
+        </select>
       </div>
       <div class="field-group">
         <label class="field-label">借給客戶</label>
@@ -755,7 +764,7 @@ function submitBorrow() {
   const client = document.getElementById('b-client').value.trim();
   const due = document.getElementById('b-due').value;
   const note = document.getElementById('b-note').value;
-  if(!staff){showAlert('請填寫借出業務姓名');return;}
+  if(!staff){showAlert('請選擇借出業務');return;}
   if(!client){showAlert('請填寫借用客戶名稱');return;}
   if(!due){showAlert('請選擇預計歸還日期');return;}
   if(!hasSig('b-sig')){showAlert('請完成借用人手寫簽名');return;}
@@ -850,8 +859,12 @@ function resetReturn() { initReturn(); goHome(); }
 
 // ===================== INVENTORY =====================
 function initInventory() {
-  callAPI({action:'getInventory'},r=>{ if(r&&r.items){inventory=r.items;} renderInv(); });
-  renderInv();
+  if(inventory.length === 0){
+    document.getElementById('inv-list').innerHTML='<div class="empty-state"><div class="empty-icon">⏳</div><div>載入中…</div></div>';
+    callAPI({action:'getInventory'},r=>{ if(r&&r.items){inventory=r.items;} renderInv(); });
+  } else {
+    renderInv();
+  }
 }
 
 function renderInv() {
