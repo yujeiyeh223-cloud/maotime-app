@@ -174,7 +174,9 @@ body{
   color:var(--text-primary);font-weight:600;
 }
 
-#borrow-reader-wrap, #return-reader-wrap{min-height:240px;max-height:320px;overflow:hidden}
+#borrow-reader-wrap, #return-reader-wrap{min-height:280px;overflow:hidden}
+#borrow-reader-wrap > div:first-child, #return-reader-wrap > div:first-child{width:100%!important}
+#borrow-reader-wrap video, #return-reader-wrap video{width:100%!important;height:auto!important;object-fit:cover}
 .no-cam-msg{
   padding:32px 16px;text-align:center;font-size:13px;
   color:var(--text-secondary);line-height:1.7;
@@ -511,6 +513,10 @@ textarea{resize:none;line-height:1.5}
         <input type="text" id="b-client" placeholder="客戶公司或姓名">
       </div>
       <div class="field-group">
+        <label class="field-label">客戶聯絡電話</label>
+        <input type="tel" id="b-phone" placeholder="例：0912-345-678">
+      </div>
+      <div class="field-group">
         <label class="field-label">預計歸還日期</label>
         <input type="date" id="b-due">
       </div>
@@ -762,10 +768,12 @@ function manualBorrow() {
 function submitBorrow() {
   const staff = document.getElementById('b-staff').value.trim();
   const client = document.getElementById('b-client').value.trim();
+  const phone = document.getElementById('b-phone').value.trim();
   const due = document.getElementById('b-due').value;
   const note = document.getElementById('b-note').value;
   if(!staff){showAlert('請選擇借出業務');return;}
   if(!client){showAlert('請填寫借用客戶名稱');return;}
+  if(!phone){showAlert('請填寫客戶聯絡電話');return;}
   if(!due){showAlert('請選擇預計歸還日期');return;}
   if(!hasSig('b-sig')){showAlert('請完成借用人手寫簽名');return;}
 
@@ -774,11 +782,11 @@ function submitBorrow() {
   const item = findItem(scannedBId);
   if(item){ item.status='out';item.staff=staff;item.client=client;item.borrowDate=bDate;item.dueDate=due; }
 
-  callAPI({action:'borrow',itemId:scannedBId,staff,client,borrowDate:bDate,dueDate:due,note,signature:sigData},r=>{
+  callAPI({action:'borrow',itemId:scannedBId,staff,client,phone,borrowDate:bDate,dueDate:due,note,signature:sigData},r=>{
     if(r && !r.success) console.warn('API回傳：',r.error);
   });
 
-  document.getElementById('b-success-msg').textContent = scannedBId+'\n借出給 '+client+'（'+staff+'）\n預計 '+due+' 前歸還';
+  document.getElementById('b-success-msg').textContent = scannedBId+'\n借出給 '+client+'（'+phone+'）\n業務：'+staff+'\n預計 '+due+' 前歸還';
   ['b-preview','b-form','b-sig-card'].forEach(id=>document.getElementById(id).classList.remove('show'));
   document.getElementById('b-submit').classList.remove('show');
   document.getElementById('b-success').classList.add('show');
@@ -943,14 +951,21 @@ function findItem(id){ return inventory.find(i=>i.id.toUpperCase()===id.toUpperC
 function today(){ return new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit'}).replace(/\//g,'-'); }
 function showAlert(msg){ alert(msg); }
 
-async function callAPI(payload,cb){
+async function callAPI(payload, cb){
   if(!GAS_URL){ if(cb)cb(null); return; }
   try{
     const action = payload.action;
     const dataCopy = Object.assign({}, payload);
     delete dataCopy.action;
+
+    // 簽名圖片太大不能放 URL，單獨處理
+    const signature = dataCopy.signature || '';
+    delete dataCopy.signature;
+
     const encoded = encodeURIComponent(JSON.stringify(dataCopy));
-    const url = GAS_URL + '?action=' + action + '&data=' + encoded;
+    const sigEncoded = signature ? encodeURIComponent(signature.substring(0, 50000)) : '';
+    const url = GAS_URL + '?action=' + action + '&data=' + encoded + (sigEncoded ? '&sig=' + sigEncoded : '');
+
     const r = await fetch(url);
     const d = await r.json();
     if(cb)cb(d);
