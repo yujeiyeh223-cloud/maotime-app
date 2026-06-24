@@ -747,7 +747,11 @@ function setBorrowMode(mode) {
 function onBorrow(id) {
   const item = findItem(id);
   if(!item){showAlert('找不到此服裝 ID：'+id+'\n請確認條碼正確');return;}
-  if(item.status==='out'){showAlert('此衣服目前外借中，無法再次借出');return;}
+  if(item.status==='out'){
+    alert('此衣服目前外借中，無法再次借出');
+    goHome(); // 問題2：警告後回首頁
+    return;
+  }
   scannedBId = item.id;
   document.getElementById('b-item-id').textContent = item.id;
   document.getElementById('b-item-meta').textContent = item.name;
@@ -755,6 +759,12 @@ function onBorrow(id) {
   document.getElementById('b-form').classList.add('show');
   document.getElementById('b-sig-card').classList.add('show');
   document.getElementById('b-submit').classList.add('show');
+  // 問題1：掃描成功後隱藏掃描器
+  document.getElementById('borrow-reader-wrap').style.display='none';
+  document.getElementById('b-scan-tab').style.display='none';
+  document.getElementById('b-manual-tab').style.display='none';
+  document.querySelector('#page-borrow .scanner-top').style.display='none';
+  document.querySelector('#page-borrow .scan-toggle').style.display='none';
   initSig('b-sig');
   if(borrowScanner){try{borrowScanner.stop();}catch(e){} borrowScanner=null;}
 }
@@ -765,7 +775,7 @@ function manualBorrow() {
   onBorrow(v);
 }
 
-function submitBorrow() {
+async function submitBorrow() {
   const staff = document.getElementById('b-staff').value.trim();
   const client = document.getElementById('b-client').value.trim();
   const phone = document.getElementById('b-phone').value.trim();
@@ -775,19 +785,26 @@ function submitBorrow() {
   if(!client){showAlert('請填寫借用客戶名稱');return;}
   if(!phone){showAlert('請填寫客戶聯絡電話');return;}
   if(!due){showAlert('請選擇預計歸還日期');return;}
+  if(!hasSig('b-sig')){showAlert('請完成借用人手寫簽名');return;}
 
-  const sigData = document.getElementById('b-sig').toDataURL('image/png');
+  const btn = document.getElementById('b-submit');
+  btn.textContent = '上傳中…'; btn.disabled = true;
+
   const bDate = today();
   const item = findItem(scannedBId);
+
+  // 第一步：傳文字資料
+  const r = await callAPIAsync({action:'borrow',itemId:scannedBId,staff,client,phone,borrowDate:bDate,dueDate:due,note});
+  if(!r || !r.success){ showAlert('外借登記失敗，請再試一次'); btn.textContent='確認外借 →'; btn.disabled=false; return; }
+
+  // 第二步：傳簽名
+  const sigData = document.getElementById('b-sig').toDataURL('image/jpeg', 0.5);
+  await callAPIAsync({action:'uploadSig',recordId:r.recordId,sigData});
+
   if(item){ item.status='out';item.staff=staff;item.client=client;item.borrowDate=bDate;item.dueDate=due; }
-
-  callAPI({action:'borrow',itemId:scannedBId,staff,client,phone,borrowDate:bDate,dueDate:due,note,signature:sigData},r=>{
-    if(r && !r.success) console.warn('API回傳：',r.error);
-  });
-
   document.getElementById('b-success-msg').textContent = scannedBId+'\n借出給 '+client+'（'+phone+'）\n業務：'+staff+'\n預計 '+due+' 前歸還';
   ['b-preview','b-form','b-sig-card'].forEach(id=>document.getElementById(id).classList.remove('show'));
-  document.getElementById('b-submit').classList.remove('show');
+  btn.classList.remove('show'); btn.textContent='確認外借 →'; btn.disabled=false;
   document.getElementById('b-success').classList.add('show');
   refreshStats();
 }
@@ -820,7 +837,10 @@ function setReturnMode(mode) {
 function onReturn(id) {
   const item = findItem(id);
   if(!item){showAlert('找不到此服裝 ID：'+id);return;}
-  if(item.status==='in'){showAlert('此衣服目前在庫中，無需歸還操作');return;}
+  if(item.status==='in'){
+    alert('此衣服目前在庫中，無需歸還操作');
+    goHome(); return;
+  }
   scannedRId = item.id;
   document.getElementById('r-item-id').textContent = item.id;
   document.getElementById('r-item-meta').textContent = item.name;
@@ -832,6 +852,10 @@ function onReturn(id) {
   document.getElementById('r-form').classList.add('show');
   document.getElementById('r-sig-card').classList.add('show');
   document.getElementById('r-submit').classList.add('show');
+  // 問題1：隱藏掃描器
+  document.getElementById('return-reader-wrap').style.display='none';
+  document.querySelector('#page-return .scanner-top').style.display='none';
+  document.querySelector('#page-return .scan-toggle').style.display='none';
   initSig('r-sig');
   if(returnScanner){try{returnScanner.stop();}catch(e){} returnScanner=null;}
 }
@@ -842,22 +866,28 @@ function manualReturn() {
   onReturn(v);
 }
 
-function submitReturn() {
+async function submitReturn() {
   if(!hasSig('r-sig')){showAlert('請完成收件人手寫簽名確認');return;}
   const condition = document.getElementById('r-condition').value;
   const note = document.getElementById('r-note').value;
-  const sigData = document.getElementById('r-sig').toDataURL('image/png');
   const rDate = today();
+
+  const btn = document.getElementById('r-submit');
+  btn.textContent = '上傳中…'; btn.disabled = true;
+
+  // 第一步：傳文字資料
+  const r = await callAPIAsync({action:'return',itemId:scannedRId,condition,note,returnDate:rDate});
+  if(!r || !r.success){ showAlert('歸還登記失敗，請再試一次'); btn.textContent='確認歸還 →'; btn.disabled=false; return; }
+
+  // 第二步：傳簽名
+  const sigData = document.getElementById('r-sig').toDataURL('image/jpeg', 0.5);
+  await callAPIAsync({action:'uploadSig',recordId:r.recordId,sigData});
+
   const item = findItem(scannedRId);
   if(item){item.status='in';item.staff='';item.client='';item.borrowDate='';item.dueDate='';}
-
-  callAPI({action:'return',itemId:scannedRId,condition,note,returnDate:rDate,signature:sigData},r=>{
-    if(r && !r.success) console.warn('API回傳：',r.error);
-  });
-
   document.getElementById('r-success-msg').textContent = scannedRId+' 已確認收回\n衣服狀態：'+condition+'\n庫存已自動更新';
   ['r-preview','r-form','r-sig-card'].forEach(id=>document.getElementById(id).classList.remove('show'));
-  document.getElementById('r-submit').classList.remove('show');
+  btn.classList.remove('show'); btn.textContent='確認歸還 →'; btn.disabled=false;
   document.getElementById('r-success').classList.add('show');
   refreshStats();
 }
@@ -910,7 +940,7 @@ function showDetail(id) {
   document.getElementById('m-name').textContent=item.name;
   const rows = item.status==='in' ?
     [['目前狀態','在庫中 ✅'],['可借出','是']] :
-    [['目前狀態','外借中 📤'],['借出業務',item.staff||'—'],['借出客戶',item.client||'—'],['借出日期',item.borrowDate||'—'],['預計歸還',item.dueDate||'—']];
+    [['目前狀態','外借中 📤'],['借出業務',item.staff||'—'],['借出客戶',item.client||'—'],['客戶電話',item.phone||'—'],['借出日期',item.borrowDate||'—'],['預計歸還',item.dueDate||'—']];
   document.getElementById('m-rows').innerHTML = rows.map(([l,v])=>`
     <div class="modal-row">
       <span class="modal-label">${l}</span>
@@ -950,21 +980,23 @@ function findItem(id){ return inventory.find(i=>i.id.toUpperCase()===id.toUpperC
 function today(){ return new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit'}).replace(/\//g,'-'); }
 function showAlert(msg){ alert(msg); }
 
-async function callAPI(payload, cb){
-  if(!GAS_URL){ if(cb)cb(null); return; }
+async function callAPIAsync(payload){
+  if(!GAS_URL) return null;
   try{
     const action = payload.action;
     const dataCopy = Object.assign({}, payload);
     delete dataCopy.action;
-    delete dataCopy.signature; // 簽名不透過 URL 傳送，避免超長
-
     const encoded = encodeURIComponent(JSON.stringify(dataCopy));
     const url = GAS_URL + '?action=' + action + '&data=' + encoded;
     const r = await fetch(url);
     const text = await r.text();
-    const d = JSON.parse(text);
-    if(cb)cb(d);
-  }catch(e){ console.warn('API error:',e); if(cb)cb(null); }
+    return JSON.parse(text);
+  }catch(e){ console.warn('API error:',e); return null; }
+}
+
+async function callAPI(payload, cb){
+  const r = await callAPIAsync(payload);
+  if(cb) cb(r);
 }
 
 function sendToGAS(){
