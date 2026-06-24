@@ -83,7 +83,8 @@ body{
 .page{
   display:none;flex:1;overflow-y:auto;padding:16px 20px;
   flex-direction:column;gap:14px;
-  padding-bottom:calc(env(safe-area-inset-bottom,0px) + 24px);
+  padding-bottom:calc(env(safe-area-inset-bottom,0px) + 32px);
+  -webkit-overflow-scrolling:touch;
 }
 .page.active{display:flex}
 
@@ -173,7 +174,7 @@ body{
   color:var(--text-primary);font-weight:600;
 }
 
-#borrow-reader-wrap, #return-reader-wrap{min-height:200px;max-height:240px;overflow:hidden}
+#borrow-reader-wrap, #return-reader-wrap{min-height:160px;max-height:180px;overflow:hidden}
 .no-cam-msg{
   padding:32px 16px;text-align:center;font-size:13px;
   color:var(--text-secondary);line-height:1.7;
@@ -706,7 +707,7 @@ function stopAll() {
 
 function startScanner(divId, onResult) {
   const s = new Html5Qrcode(divId);
-  s.start({facingMode:'environment'},{fps:10,qrbox:{width:220,height:130},aspectRatio:1.7},
+  s.start({facingMode:'environment'},{fps:10,qrbox:{width:200,height:100},aspectRatio:1.5},
     text=>{ onResult(text.trim()); s.stop(); },
     ()=>{}
   ).catch(()=>{
