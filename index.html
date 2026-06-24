@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1a1a1a">
+<title>卯時設計 套量服管理</title>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<style>
+/* ==================== RESET & BASE ==================== */
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg-primary:#ffffff;
+  --bg-secondary:#f5f5f3;
+  --bg-tertiary:#eeede9;
+  --text-primary:#1a1a1a;
+  --text-secondary:#6b6b68;
+  --text-hint:#a8a8a5;
+  --border-light:rgba(0,0,0,0.08);
+  --border-mid:rgba(0,0,0,0.15);
+  --accent-dark:#1a1a1a;
+  --accent-green:#0F6E56;
+  --accent-green-light:#E1F5EE;
+  --accent-red:#D85A30;
+  --accent-red-light:#FAECE7;
+  --radius-sm:8px;
+  --radius-md:12px;
+  --radius-lg:16px;
+  --radius-xl:20px;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg-primary:#1c1c1e;
+  --bg-secondary:#2c2c2e;
+  --bg-tertiary:#3a3a3c;
+  --text-primary:#f5f5f0;
+  --text-secondary:#9898a0;
+  --text-hint:#555560;
+  --border-light:rgba(255,255,255,0.08);
+  --border-mid:rgba(255,255,255,0.15);
+}}
+
+html,body{height:100%;overflow:hidden}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif;
+  background:var(--bg-secondary);
+  color:var(--text-primary);
+  font-size:16px;
+  line-height:1.5;
+}
+
+/* ==================== APP SHELL ==================== */
+#app{
+  max-width:480px;
+  margin:0 auto;
+  height:100vh;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  position:relative;
+  background:var(--bg-secondary);
+}
+
+/* ==================== HEADER ==================== */
+.header{
+  padding:env(safe-area-inset-top,16px) 20px 0;
+  padding-top:calc(env(safe-area-inset-top,0px) + 16px);
+  background:var(--bg-secondary);
+  flex-shrink:0;
+}
+.header-inner{display:flex;align-items:center;gap:10px;padding-bottom:4px}
+.logo-mark{
+  width:36px;height:36px;border-radius:9px;
+  background:var(--text-primary);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.logo-mark svg{width:18px;height:18px;fill:var(--bg-secondary)}
+.brand-name{font-size:13px;font-weight:600;letter-spacing:0.03em}
+.brand-sub{font-size:11px;color:var(--text-secondary)}
+
+/* ==================== PAGES ==================== */
+.page{
+  display:none;flex:1;overflow-y:auto;padding:16px 20px;
+  flex-direction:column;gap:14px;
+  padding-bottom:calc(env(safe-area-inset-bottom,0px) + 24px);
+}
+.page.active{display:flex}
+
+/* ==================== HOME ==================== */
+.greeting h1{font-size:24px;font-weight:600;line-height:1.3;margin:12px 0 4px}
+.greeting p{font-size:14px;color:var(--text-secondary)}
+
+.stats-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat-card{
+  background:var(--bg-primary);border-radius:var(--radius-md);
+  border:1px solid var(--border-light);padding:14px 16px;
+}
+.stat-num{font-size:28px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums}
+.stat-label{font-size:12px;color:var(--text-secondary);margin-top:4px}
+.stat-card.green .stat-num{color:var(--accent-green)}
+.stat-card.orange .stat-num{color:var(--accent-red)}
+
+.main-btn{
+  border:none;border-radius:var(--radius-lg);padding:0;cursor:pointer;
+  width:100%;display:flex;align-items:center;gap:0;overflow:hidden;
+  transition:transform 0.12s,opacity 0.12s;position:relative;min-height:80px;
+}
+.main-btn:active{transform:scale(0.975);opacity:0.92}
+.btn-icon-area{
+  width:76px;display:flex;align-items:center;justify-content:center;
+  align-self:stretch;flex-shrink:0;
+}
+.btn-content{flex:1;text-align:left;padding:18px 0 18px 4px}
+.btn-label{font-size:19px;font-weight:600;display:block;margin-bottom:3px}
+.btn-desc{font-size:12px;opacity:0.7;display:block}
+.btn-arrow{font-size:22px;margin-right:18px;opacity:0.4}
+
+.btn-borrow{background:#1a1a1a;color:#fff}
+.btn-borrow .btn-icon-area{background:rgba(255,255,255,0.06)}
+.btn-return{background:var(--accent-green);color:#fff}
+.btn-return .btn-icon-area{background:rgba(255,255,255,0.08)}
+.btn-inventory{
+  background:var(--bg-primary);color:var(--text-primary);
+  border:1px solid var(--border-light);
+}
+.btn-inventory .btn-icon-area{background:var(--bg-secondary)}
+.btn-inventory .btn-desc{color:var(--text-secondary)}
+
+/* ==================== SUB-PAGE HEADER ==================== */
+.page-hd{display:flex;align-items:center;gap:12px;margin-bottom:4px;flex-shrink:0}
+.back-btn{
+  width:38px;height:38px;border:1px solid var(--border-mid);border-radius:10px;
+  background:var(--bg-primary);cursor:pointer;display:flex;align-items:center;
+  justify-content:center;color:var(--text-primary);font-size:20px;flex-shrink:0;
+  transition:background 0.12s;
+}
+.back-btn:active{background:var(--bg-secondary)}
+.page-title{font-size:19px;font-weight:600}
+.page-badge{
+  font-size:10px;padding:3px 8px;border-radius:20px;font-weight:700;
+  letter-spacing:0.06em;margin-left:auto;
+}
+.badge-borrow{background:#1a1a1a;color:#fff}
+.badge-return{background:var(--accent-green);color:#fff}
+
+/* ==================== SCANNER CARD ==================== */
+.scanner-card{
+  background:var(--bg-primary);border-radius:var(--radius-lg);
+  border:1px solid var(--border-light);overflow:hidden;flex-shrink:0;
+}
+.scanner-top{
+  padding:14px 16px 12px;border-bottom:1px solid var(--border-light);
+  display:flex;align-items:center;gap:12px;
+}
+.scanner-icon{
+  width:38px;height:38px;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.scanner-icon.dark{background:#1a1a1a}
+.scanner-icon.green{background:var(--accent-green)}
+.scanner-label{font-size:14px;font-weight:600}
+.scanner-desc{font-size:12px;color:var(--text-secondary)}
+
+.scan-toggle{display:flex;gap:6px;padding:10px 14px}
+.toggle-btn{
+  flex:1;padding:9px 6px;border-radius:9px;border:1px solid var(--border-light);
+  background:var(--bg-secondary);cursor:pointer;font-size:12px;
+  color:var(--text-secondary);transition:all 0.15s;font-family:inherit;
+}
+.toggle-btn.active{
+  background:var(--bg-primary);border-color:var(--border-mid);
+  color:var(--text-primary);font-weight:600;
+}
+
+#borrow-reader-wrap, #return-reader-wrap{min-height:200px;max-height:240px;overflow:hidden}
+.no-cam-msg{
+  padding:32px 16px;text-align:center;font-size:13px;
+  color:var(--text-secondary);line-height:1.7;
+}
+
+.manual-area{display:none;padding:0 14px 14px}
+.manual-area.show{display:block}
+.manual-row{display:flex;gap:8px}
+.scan-hint{
+  padding:8px 16px 12px;font-size:12px;
+  color:var(--text-secondary);text-align:center;
+}
+
+/* Scanned item preview */
+.scanned-preview{display:none;border-top:1px solid var(--border-light)}
+.scanned-preview.show{display:block}
+.preview-inner{
+  display:flex;align-items:center;gap:12px;
+  padding:14px 16px;background:var(--bg-secondary);
+}
+.item-icon-box{
+  width:42px;height:42px;border-radius:11px;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.item-icon-box.dark{background:#1a1a1a}
+.item-icon-box.green{background:var(--accent-green)}
+.preview-id{font-size:13px;font-weight:600;font-family:ui-monospace,monospace}
+.preview-meta{font-size:12px;color:var(--text-secondary);margin-top:2px}
+.chip{
+  font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;
+  margin-left:auto;flex-shrink:0;
+}
+.chip-in{background:var(--accent-green-light);color:#0F6E56}
+.chip-out{background:var(--accent-red-light);color:#993C1D}
+
+/* ==================== FORM CARD ==================== */
+.form-card{
+  background:var(--bg-primary);border-radius:var(--radius-lg);
+  border:1px solid var(--border-light);padding:16px;
+  display:none;flex-direction:column;gap:14px;
+}
+.form-card.show{display:flex}
+
+.field-group{display:flex;flex-direction:column;gap:6px}
+.field-label{font-size:11px;font-weight:700;color:var(--text-secondary);letter-spacing:0.05em;text-transform:uppercase}
+
+input[type=text],input[type=date],select,textarea{
+  width:100%;padding:11px 13px;border-radius:10px;
+  border:1px solid var(--border-light);background:var(--bg-secondary);
+  font-size:15px;color:var(--text-primary);font-family:inherit;outline:none;
+  transition:border-color 0.15s,background 0.15s;
+  -webkit-appearance:none;
+}
+input:focus,select:focus,textarea:focus{
+  border-color:var(--border-mid);background:var(--bg-primary);
+}
+select{cursor:pointer}
+textarea{resize:none;line-height:1.5}
+
+.info-box{
+  background:var(--bg-secondary);border-radius:var(--radius-sm);
+  padding:13px;display:flex;flex-direction:column;gap:8px;
+}
+.info-box-title{font-size:11px;font-weight:700;color:var(--text-secondary);margin-bottom:2px;letter-spacing:0.05em;text-transform:uppercase}
+.info-row{display:flex;justify-content:space-between;font-size:13px;gap:12px}
+.info-row-label{color:var(--text-secondary)}
+.info-row-val{font-weight:600;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:55%}
+
+/* ==================== SIGNATURE ==================== */
+.sig-card{
+  background:var(--bg-primary);border-radius:var(--radius-lg);
+  border:1px solid var(--border-light);overflow:hidden;display:none;flex-shrink:0;
+}
+.sig-card.show{display:block}
+.sig-header{
+  padding:13px 16px;border-bottom:1px solid var(--border-light);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.sig-title{font-size:14px;font-weight:600}
+.sig-clear-btn{
+  font-size:12px;color:var(--accent-red);cursor:pointer;
+  background:none;border:none;font-family:inherit;padding:4px 8px;
+}
+.sig-canvas{
+  display:block;width:100%;height:160px;touch-action:none;cursor:crosshair;
+}
+.sig-hint{padding:8px 16px 12px;font-size:11px;color:var(--text-hint)}
+
+/* ==================== SUBMIT BUTTON ==================== */
+.submit-btn{
+  display:none;border:none;border-radius:var(--radius-md);padding:17px;
+  font-size:16px;font-weight:700;cursor:pointer;width:100%;
+  font-family:inherit;transition:transform 0.12s,opacity 0.12s;flex-shrink:0;
+  letter-spacing:0.02em;
+}
+.submit-btn.show{display:block}
+.submit-btn:active{transform:scale(0.975);opacity:0.9}
+.submit-btn.dark{background:#1a1a1a;color:#fff}
+.submit-btn.green{background:var(--accent-green);color:#fff}
+
+/* ==================== SUCCESS ==================== */
+.success-screen{
+  display:none;flex-direction:column;align-items:center;
+  justify-content:center;flex:1;gap:18px;text-align:center;padding:32px;
+}
+.success-screen.show{display:flex}
+.success-icon{font-size:64px;line-height:1}
+.success-title{font-size:22px;font-weight:700}
+.success-msg{font-size:14px;color:var(--text-secondary);line-height:1.7;white-space:pre-line}
+.success-back-btn{
+  padding:15px 36px;border-radius:var(--radius-md);
+  border:1px solid var(--border-mid);background:var(--bg-primary);
+  font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;
+  color:var(--text-primary);margin-top:8px;
+}
+
+/* ==================== INVENTORY ==================== */
+.inv-search{position:relative}
+.inv-search input{padding-left:38px;font-size:14px}
+.inv-search-icon{
+  position:absolute;left:12px;top:50%;transform:translateY(-50%);
+  font-size:16px;color:var(--text-secondary);pointer-events:none;
+}
+.inv-tabs{
+  display:flex;gap:6px;background:var(--bg-primary);
+  border-radius:var(--radius-sm);padding:4px;border:1px solid var(--border-light);
+  flex-shrink:0;
+}
+.inv-tab{
+  flex:1;padding:9px;border:none;background:transparent;border-radius:7px;
+  font-size:13px;cursor:pointer;font-family:inherit;
+  color:var(--text-secondary);transition:all 0.15s;font-weight:500;
+}
+.inv-tab.active{
+  background:var(--bg-secondary);color:var(--text-primary);
+  font-weight:700;
+}
+.inv-list{display:flex;flex-direction:column;gap:8px}
+
+.inv-item{
+  background:var(--bg-primary);border-radius:var(--radius-md);
+  border:1px solid var(--border-light);padding:14px 16px;
+  display:flex;align-items:center;gap:12px;cursor:pointer;
+  transition:border-color 0.12s,transform 0.1s;
+}
+.inv-item:active{transform:scale(0.99);border-color:var(--border-mid)}
+.inv-item-icon{
+  width:40px;height:40px;border-radius:11px;background:var(--bg-secondary);
+  display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;
+}
+.inv-item-info{flex:1;min-width:0}
+.inv-item-id{font-size:13px;font-weight:700;font-family:ui-monospace,monospace}
+.inv-item-sub{font-size:12px;color:var(--text-secondary);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.inv-chip{font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;flex-shrink:0}
+.inv-chip.in{background:var(--accent-green-light);color:#0F6E56}
+.inv-chip.out{background:var(--accent-red-light);color:#993C1D}
+
+/* ==================== MODAL ==================== */
+.modal-overlay{
+  position:absolute;inset:0;background:rgba(0,0,0,0.5);
+  display:none;align-items:flex-end;z-index:200;backdrop-filter:blur(2px);
+}
+.modal-overlay.show{display:flex}
+.modal-sheet{
+  background:var(--bg-primary);border-radius:var(--radius-xl) var(--radius-xl) 0 0;
+  width:100%;padding:20px;max-height:80vh;overflow-y:auto;
+  padding-bottom:calc(env(safe-area-inset-bottom,0px) + 20px);
+}
+.modal-handle{
+  width:38px;height:4px;background:var(--border-mid);
+  border-radius:2px;margin:0 auto 18px;
+}
+.modal-item-id{font-size:17px;font-weight:700;font-family:ui-monospace,monospace}
+.modal-item-name{font-size:14px;color:var(--text-secondary);margin-top:4px 0 18px}
+.modal-divider{height:1px;background:var(--border-light);margin:14px 0}
+.modal-row{display:flex;justify-content:space-between;align-items:flex-start;padding:10px 0}
+.modal-row+.modal-row{border-top:1px solid var(--border-light)}
+.modal-label{font-size:13px;color:var(--text-secondary)}
+.modal-val{font-size:13px;font-weight:600;text-align:right;max-width:55%;word-break:break-all}
+.modal-close{
+  width:100%;margin-top:18px;padding:14px;border:1px solid var(--border-light);
+  border-radius:var(--radius-md);background:var(--bg-secondary);
+  font-size:15px;cursor:pointer;font-family:inherit;color:var(--text-primary);font-weight:600;
+}
+
+/* ==================== CONFIG NOTICE ==================== */
+.notice-box{
+  background:#FAEEDA;border:1px solid #FAC775;border-radius:var(--radius-md);
+  padding:13px 15px;font-size:12px;color:#633806;line-height:1.7;
+}
+.notice-box strong{display:block;margin-bottom:3px;font-weight:700;font-size:13px}
+.notice-link{color:#854F0B;font-weight:600;text-decoration:underline;cursor:pointer}
+
+/* ==================== EMPTY STATE ==================== */
+.empty-state{
+  padding:48px 24px;text-align:center;color:var(--text-secondary);font-size:14px;
+  display:flex;flex-direction:column;align-items:center;gap:10px;
+}
+.empty-state .empty-icon{font-size:40px}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-inner">
+      <div class="logo-mark">
+        <svg viewBox="0 0 18 18"><rect x="1" y="1" width="7" height="7" rx="1.5"/><rect x="10" y="1" width="7" height="7" rx="1.5"/><rect x="1" y="10" width="7" height="7" rx="1.5"/><rect x="10" y="10" width="7" height="7" rx="1.5" fill-opacity="0.35"/></svg>
+      </div>
+      <div>
+        <div class="brand-name">卯時設計有限公司</div>
+        <div class="brand-sub">套量服外借管理系統</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== HOME ===== -->
+  <div id="page-home" class="page active">
+    <div class="greeting">
+      <h1>您好 👋<br>今天要做什麼？</h1>
+      <p>掃碼即可完成借還，三步搞定</p>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card green">
+        <div class="stat-num" id="stat-in">—</div>
+        <div class="stat-label">目前在庫</div>
+      </div>
+      <div class="stat-card orange">
+        <div class="stat-num" id="stat-out">—</div>
+        <div class="stat-label">外借中</div>
+      </div>
+    </div>
+
+    <button class="main-btn btn-borrow" onclick="goPage('borrow')">
+      <div class="btn-icon-area">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </div>
+      <div class="btn-content">
+        <span class="btn-label">外借</span>
+        <span class="btn-desc">掃碼登記借出套量服</span>
+      </div>
+      <span class="btn-arrow">›</span>
+    </button>
+
+    <button class="main-btn btn-return" onclick="goPage('return')">
+      <div class="btn-icon-area">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      </div>
+      <div class="btn-content">
+        <span class="btn-label">歸還</span>
+        <span class="btn-desc">掃碼確認收回套量服</span>
+      </div>
+      <span class="btn-arrow">›</span>
+    </button>
+
+    <button class="main-btn btn-inventory" onclick="goPage('inventory')">
+      <div class="btn-icon-area">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+      </div>
+      <div class="btn-content">
+        <span class="btn-label">庫存查詢</span>
+        <span class="btn-desc">查看所有衣服借還狀態</span>
+      </div>
+      <span class="btn-arrow">›</span>
+    </button>
+
+    <div class="notice-box" id="config-notice">
+      <strong>⚙️ 尚未連接後端試算表</strong>
+      請在此檔案頂端的 <code>GAS_URL</code> 填入您的 Google Apps Script 部署網址，即可啟用自動同步功能。<br>
+      <span class="notice-link" onclick="sendToGAS()">→ 測試 API 連線</span>
+    </div>
+  </div>
+
+  <!-- ===== BORROW PAGE ===== -->
+  <div id="page-borrow" class="page">
+    <div class="page-hd">
+      <button class="back-btn" onclick="goHome()">‹</button>
+      <span class="page-title">外借登記</span>
+      <span class="page-badge badge-borrow">BORROW</span>
+    </div>
+
+    <div class="scanner-card">
+      <div class="scanner-top">
+        <div class="scanner-icon dark">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><line x1="14" y1="14" x2="21" y2="14"/><line x1="21" y1="14" x2="21" y2="21"/><line x1="14" y1="21" x2="21" y2="21"/></svg>
+        </div>
+        <div>
+          <div class="scanner-label">掃描服裝條碼</div>
+          <div class="scanner-desc">對準吊牌或袋上的 QR Code / 條碼</div>
+        </div>
+      </div>
+      <div class="scan-toggle">
+        <button class="toggle-btn active" id="b-scan-tab" onclick="setBorrowMode('scan')">📷 相機掃描</button>
+        <button class="toggle-btn" id="b-manual-tab" onclick="setBorrowMode('manual')">⌨️ 手動輸入</button>
+      </div>
+      <div id="borrow-reader-wrap">
+        <div id="borrow-reader"></div>
+        <div class="scan-hint">將條碼對準框內，即自動辨識</div>
+      </div>
+      <div class="manual-area" id="b-manual-area">
+        <div class="manual-row">
+          <input type="text" id="b-manual-input" placeholder="輸入服裝 ID，如 MS-POLO-001" style="flex:1">
+          <button onclick="manualBorrow()" style="padding:11px 16px;border:none;border-radius:10px;background:#1a1a1a;color:#fff;font-size:14px;cursor:pointer;font-weight:600;white-space:nowrap;font-family:inherit">確認</button>
+        </div>
+      </div>
+      <div class="scanned-preview" id="b-preview">
+        <div class="preview-inner">
+          <div class="item-icon-box dark">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.38 3.46L16 2a4 4 0 01-8 0L3.62 3.46a2 2 0 00-1.34 2.23l.58 3.57a1 1 0 00.99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 002-2V10h2.15a1 1 0 00.99-.84l.58-3.57a2 2 0 00-1.34-2.23z"/></svg>
+          </div>
+          <div>
+            <div class="preview-id" id="b-item-id">—</div>
+            <div class="preview-meta" id="b-item-meta">—</div>
+          </div>
+          <span class="chip chip-in">在庫中 ✓</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-card" id="b-form">
+      <div class="field-group">
+        <label class="field-label">借出業務</label>
+        <input type="text" id="b-staff" placeholder="請輸入業務姓名" autocomplete="name">
+      </div>
+      <div class="field-group">
+        <label class="field-label">借給客戶</label>
+        <input type="text" id="b-client" placeholder="客戶公司或姓名">
+      </div>
+      <div class="field-group">
+        <label class="field-label">預計歸還日期</label>
+        <input type="date" id="b-due">
+      </div>
+      <div class="field-group">
+        <label class="field-label">備註（選填）</label>
+        <textarea id="b-note" rows="2" placeholder="如有特殊說明請填寫"></textarea>
+      </div>
+    </div>
+
+    <div class="sig-card" id="b-sig-card">
+      <div class="sig-header">
+        <span class="sig-title">✍️ 借用人簽名</span>
+        <button class="sig-clear-btn" onclick="clearSig('b')">清除重簽</button>
+      </div>
+      <canvas class="sig-canvas" id="b-sig" height="200" style="background:#f8f8f6"></canvas>
+      <div class="sig-hint">請在上方空白處手寫簽名確認借出</div>
+    </div>
+
+    <button class="submit-btn dark" id="b-submit" onclick="submitBorrow()">確認外借 →</button>
+
+    <div class="success-screen" id="b-success">
+      <div class="success-icon">✅</div>
+      <div class="success-title">外借登記完成！</div>
+      <div class="success-msg" id="b-success-msg">已記錄外借資訊<br>庫存狀態自動更新</div>
+      <button class="success-back-btn" onclick="resetBorrow()">返回首頁</button>
+    </div>
+  </div>
+
+  <!-- ===== RETURN PAGE ===== -->
+  <div id="page-return" class="page">
+    <div class="page-hd">
+      <button class="back-btn" onclick="goHome()">‹</button>
+      <span class="page-title">歸還確認</span>
+      <span class="page-badge badge-return">RETURN</span>
+    </div>
+
+    <div class="scanner-card">
+      <div class="scanner-top">
+        <div class="scanner-icon green">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><line x1="14" y1="14" x2="21" y2="14"/><line x1="21" y1="14" x2="21" y2="21"/><line x1="14" y1="21" x2="21" y2="21"/></svg>
+        </div>
+        <div>
+          <div class="scanner-label">掃描服裝條碼</div>
+          <div class="scanner-desc">確認要歸還的套量服</div>
+        </div>
+      </div>
+      <div class="scan-toggle">
+        <button class="toggle-btn active" id="r-scan-tab" onclick="setReturnMode('scan')">📷 相機掃描</button>
+        <button class="toggle-btn" id="r-manual-tab" onclick="setReturnMode('manual')">⌨️ 手動輸入</button>
+      </div>
+      <div id="return-reader-wrap">
+        <div id="return-reader"></div>
+        <div class="scan-hint">將條碼對準框內，即自動辨識</div>
+      </div>
+      <div class="manual-area" id="r-manual-area">
+        <div class="manual-row">
+          <input type="text" id="r-manual-input" placeholder="輸入服裝 ID，如 MS-POLO-001" style="flex:1">
+          <button onclick="manualReturn()" style="padding:11px 16px;border:none;border-radius:10px;background:#0F6E56;color:#fff;font-size:14px;cursor:pointer;font-weight:600;white-space:nowrap;font-family:inherit">確認</button>
+        </div>
+      </div>
+      <div class="scanned-preview" id="r-preview">
+        <div class="preview-inner">
+          <div class="item-icon-box green">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.38 3.46L16 2a4 4 0 01-8 0L3.62 3.46a2 2 0 00-1.34 2.23l.58 3.57a1 1 0 00.99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 002-2V10h2.15a1 1 0 00.99-.84l.58-3.57a2 2 0 00-1.34-2.23z"/></svg>
+          </div>
+          <div>
+            <div class="preview-id" id="r-item-id">—</div>
+            <div class="preview-meta" id="r-item-meta">—</div>
+          </div>
+          <span class="chip chip-out">外借中</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-card" id="r-form">
+      <div class="info-box">
+        <div class="info-box-title">借出資訊確認</div>
+        <div class="info-row"><span class="info-row-label">借出業務</span><span class="info-row-val" id="r-staff-val">—</span></div>
+        <div class="info-row"><span class="info-row-label">借出客戶</span><span class="info-row-val" id="r-client-val">—</span></div>
+        <div class="info-row"><span class="info-row-label">借出日期</span><span class="info-row-val" id="r-bdate-val">—</span></div>
+        <div class="info-row"><span class="info-row-label">預計歸還</span><span class="info-row-val" id="r-ddate-val">—</span></div>
+      </div>
+      <div class="field-group">
+        <label class="field-label">衣服狀態</label>
+        <select id="r-condition">
+          <option value="良好">衣服狀態良好</option>
+          <option value="有輕微污損">有輕微污損</option>
+          <option value="需要清洗">需要清洗</option>
+          <option value="有損壞">有損壞，需維修</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label class="field-label">備註（選填）</label>
+        <textarea id="r-note" rows="2" placeholder="如有異常請填寫"></textarea>
+      </div>
+    </div>
+
+    <div class="sig-card" id="r-sig-card">
+      <div class="sig-header">
+        <span class="sig-title">✍️ 收件人簽名確認</span>
+        <button class="sig-clear-btn" onclick="clearSig('r')">清除重簽</button>
+      </div>
+      <canvas class="sig-canvas" id="r-sig" height="200" style="background:#f0faf6"></canvas>
+      <div class="sig-hint">請在上方空白處手寫簽名確認已收回</div>
+    </div>
+
+    <button class="submit-btn green" id="r-submit" onclick="submitReturn()">確認歸還 →</button>
+
+    <div class="success-screen" id="r-success">
+      <div class="success-icon">📦</div>
+      <div class="success-title">歸還登記完成！</div>
+      <div class="success-msg" id="r-success-msg">衣服已確認收回<br>庫存狀態自動更新</div>
+      <button class="success-back-btn" onclick="resetReturn()">返回首頁</button>
+    </div>
+  </div>
+
+  <!-- ===== INVENTORY PAGE ===== -->
+  <div id="page-inventory" class="page">
+    <div class="page-hd">
+      <button class="back-btn" onclick="goHome()">‹</button>
+      <span class="page-title">庫存查詢</span>
+    </div>
+
+    <div class="inv-search">
+      <span class="inv-search-icon">🔍</span>
+      <input type="text" id="inv-q" placeholder="搜尋 ID、品項或客戶名稱" oninput="renderInv()">
+    </div>
+
+    <div class="inv-tabs">
+      <button class="inv-tab active" onclick="setInvTab('all',this)">全部</button>
+      <button class="inv-tab" onclick="setInvTab('in',this)">在庫中</button>
+      <button class="inv-tab" onclick="setInvTab('out',this)">外借中</button>
+    </div>
+
+    <div id="inv-list" class="inv-list"></div>
+  </div>
+
+  <!-- MODAL -->
+  <div class="modal-overlay" id="modal" onclick="closeModal()">
+    <div class="modal-sheet" onclick="event.stopPropagation()">
+      <div class="modal-handle"></div>
+      <div class="modal-item-id" id="m-id">—</div>
+      <div class="modal-item-name" id="m-name" style="color:var(--text-secondary);margin:4px 0 16px"></div>
+      <div id="m-rows"></div>
+      <button class="modal-close" onclick="closeModal()">關閉</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ===================== CONFIG =====================
+// ⚠️ 填入您的 Google Apps Script 部署網址（部署後取得）
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbyPu3mmsDpIeCpHi8nDAjRejuoindEjketHtT1sEMj1DMZINSWZaB9i2qHApeTfszOR0A/exec';
+
+// ===================== DEMO DATA =====================
+let inventory = [
+  {id:'MS-POLO-001',name:'Polo 衫 / 白 / M',status:'in',staff:'',client:'',borrowDate:'',dueDate:''},
+  {id:'MS-POLO-002',name:'Polo 衫 / 白 / L',status:'out',staff:'王小明',client:'台灣紡織股份有限公司',borrowDate:'2025-06-18',dueDate:'2025-06-25'},
+  {id:'MS-POLO-003',name:'Polo 衫 / 黑 / M',status:'in',staff:'',client:'',borrowDate:'',dueDate:''},
+  {id:'MS-JACKET-001',name:'夾克 / 深藍 / L',status:'out',staff:'陳美玲',client:'美達服飾有限公司',borrowDate:'2025-06-15',dueDate:'2025-06-22'},
+  {id:'MS-JACKET-002',name:'夾克 / 深藍 / XL',status:'in',staff:'',client:'',borrowDate:'',dueDate:''},
+  {id:'MS-TEE-001',name:'T 恤 / 灰 / S',status:'in',staff:'',client:'',borrowDate:'',dueDate:''},
+  {id:'MS-TEE-002',name:'T 恤 / 灰 / M',status:'out',staff:'林大偉',client:'晶晶製衣廠',borrowDate:'2025-06-20',dueDate:'2025-06-27'},
+  {id:'MS-TEE-003',name:'T 恤 / 灰 / L',status:'in',staff:'',client:'',borrowDate:'',dueDate:''},
+];
+
+// ===================== STATE =====================
+let scannedBId = null, scannedRId = null;
+let borrowScanner = null, returnScanner = null;
+let invTabFilter = 'all';
+
+// ===================== NAVIGATION =====================
+function goPage(p) {
+  document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
+  document.getElementById('page-'+p).classList.add('active');
+  if(p==='borrow') initBorrow();
+  if(p==='return') initReturn();
+  if(p==='inventory') initInventory();
+}
+
+function goHome() {
+  stopAll();
+  document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
+  document.getElementById('page-home').classList.add('active');
+  refreshStats();
+}
+
+function refreshStats() {
+  document.getElementById('stat-in').textContent = inventory.filter(i=>i.status==='in').length;
+  document.getElementById('stat-out').textContent = inventory.filter(i=>i.status==='out').length;
+}
+
+// ===================== SCANNER =====================
+function stopAll() {
+  if(borrowScanner){try{borrowScanner.stop();}catch(e){} borrowScanner=null;}
+  if(returnScanner){try{returnScanner.stop();}catch(e){} returnScanner=null;}
+}
+
+function startScanner(divId, onResult) {
+  const s = new Html5Qrcode(divId);
+  s.start({facingMode:'environment'},{fps:10,qrbox:{width:220,height:130},aspectRatio:1.7},
+    text=>{ onResult(text.trim()); s.stop(); },
+    ()=>{}
+  ).catch(()=>{
+    document.getElementById(divId).innerHTML = '<div class="no-cam-msg">⚠️ 無法存取相機<br>請切換至「手動輸入」模式<br><small>（需在 https:// 網域或本機使用）</small></div>';
+  });
+  return s;
+}
+
+// ===================== BORROW =====================
+function initBorrow() {
+  scannedBId = null;
+  ['b-preview','b-form','b-sig-card'].forEach(id=>document.getElementById(id).classList.remove('show'));
+  document.getElementById('b-submit').classList.remove('show');
+  document.getElementById('b-success').classList.remove('show');
+  document.getElementById('b-staff').value='';
+  document.getElementById('b-client').value='';
+  document.getElementById('b-note').value='';
+  clearCanvas('b-sig');
+  setBorrowMode('scan');
+}
+
+function setBorrowMode(mode) {
+  document.getElementById('b-scan-tab').classList.toggle('active',mode==='scan');
+  document.getElementById('b-manual-tab').classList.toggle('active',mode==='manual');
+  document.getElementById('borrow-reader-wrap').style.display = mode==='scan'?'block':'none';
+  document.getElementById('b-manual-area').classList.toggle('show',mode==='manual');
+  if(mode==='scan'){
+    if(!borrowScanner){ document.getElementById('borrow-reader').innerHTML=''; borrowScanner=startScanner('borrow-reader',onBorrow); }
+  } else {
+    if(borrowScanner){try{borrowScanner.stop();}catch(e){} borrowScanner=null;}
+  }
+}
+
+function onBorrow(id) {
+  const item = findItem(id);
+  if(!item){showAlert('找不到此服裝 ID：'+id+'\n請確認條碼正確');return;}
+  if(item.status==='out'){showAlert('此衣服目前外借中，無法再次借出');return;}
+  scannedBId = item.id;
+  document.getElementById('b-item-id').textContent = item.id;
+  document.getElementById('b-item-meta').textContent = item.name;
+  document.getElementById('b-preview').classList.add('show');
+  document.getElementById('b-form').classList.add('show');
+  document.getElementById('b-sig-card').classList.add('show');
+  document.getElementById('b-submit').classList.add('show');
+  initSig('b-sig');
+  if(borrowScanner){try{borrowScanner.stop();}catch(e){} borrowScanner=null;}
+}
+
+function manualBorrow() {
+  const v = document.getElementById('b-manual-input').value.trim();
+  if(!v){showAlert('請輸入服裝 ID');return;}
+  onBorrow(v);
+}
+
+function submitBorrow() {
+  const staff = document.getElementById('b-staff').value.trim();
+  const client = document.getElementById('b-client').value.trim();
+  const due = document.getElementById('b-due').value;
+  const note = document.getElementById('b-note').value;
+  if(!staff){showAlert('請填寫借出業務姓名');return;}
+  if(!client){showAlert('請填寫借用客戶名稱');return;}
+  if(!due){showAlert('請選擇預計歸還日期');return;}
+  if(!hasSig('b-sig')){showAlert('請完成借用人手寫簽名');return;}
+
+  const sigData = document.getElementById('b-sig').toDataURL('image/png');
+  const bDate = today();
+  const item = findItem(scannedBId);
+  if(item){ item.status='out';item.staff=staff;item.client=client;item.borrowDate=bDate;item.dueDate=due; }
+
+  callAPI({action:'borrow',itemId:scannedBId,staff,client,borrowDate:bDate,dueDate:due,note,signature:sigData},r=>{
+    if(r && !r.success) console.warn('API回傳：',r.error);
+  });
+
+  document.getElementById('b-success-msg').textContent = scannedBId+'\n借出給 '+client+'（'+staff+'）\n預計 '+due+' 前歸還';
+  ['b-preview','b-form','b-sig-card'].forEach(id=>document.getElementById(id).classList.remove('show'));
+  document.getElementById('b-submit').classList.remove('show');
+  document.getElementById('b-success').classList.add('show');
+  refreshStats();
+}
+
+function resetBorrow() { initBorrow(); goHome(); }
+
+// ===================== RETURN =====================
+function initReturn() {
+  scannedRId = null;
+  ['r-preview','r-form','r-sig-card'].forEach(id=>document.getElementById(id).classList.remove('show'));
+  document.getElementById('r-submit').classList.remove('show');
+  document.getElementById('r-success').classList.remove('show');
+  document.getElementById('r-note').value='';
+  clearCanvas('r-sig');
+  setReturnMode('scan');
+}
+
+function setReturnMode(mode) {
+  document.getElementById('r-scan-tab').classList.toggle('active',mode==='scan');
+  document.getElementById('r-manual-tab').classList.toggle('active',mode==='manual');
+  document.getElementById('return-reader-wrap').style.display = mode==='scan'?'block':'none';
+  document.getElementById('r-manual-area').classList.toggle('show',mode==='manual');
+  if(mode==='scan'){
+    if(!returnScanner){ document.getElementById('return-reader').innerHTML=''; returnScanner=startScanner('return-reader',onReturn); }
+  } else {
+    if(returnScanner){try{returnScanner.stop();}catch(e){} returnScanner=null;}
+  }
+}
+
+function onReturn(id) {
+  const item = findItem(id);
+  if(!item){showAlert('找不到此服裝 ID：'+id);return;}
+  if(item.status==='in'){showAlert('此衣服目前在庫中，無需歸還操作');return;}
+  scannedRId = item.id;
+  document.getElementById('r-item-id').textContent = item.id;
+  document.getElementById('r-item-meta').textContent = item.name;
+  document.getElementById('r-staff-val').textContent = item.staff||'—';
+  document.getElementById('r-client-val').textContent = item.client||'—';
+  document.getElementById('r-bdate-val').textContent = item.borrowDate||'—';
+  document.getElementById('r-ddate-val').textContent = item.dueDate||'—';
+  document.getElementById('r-preview').classList.add('show');
+  document.getElementById('r-form').classList.add('show');
+  document.getElementById('r-sig-card').classList.add('show');
+  document.getElementById('r-submit').classList.add('show');
+  initSig('r-sig');
+  if(returnScanner){try{returnScanner.stop();}catch(e){} returnScanner=null;}
+}
+
+function manualReturn() {
+  const v = document.getElementById('r-manual-input').value.trim();
+  if(!v){showAlert('請輸入服裝 ID');return;}
+  onReturn(v);
+}
+
+function submitReturn() {
+  if(!hasSig('r-sig')){showAlert('請完成收件人手寫簽名確認');return;}
+  const condition = document.getElementById('r-condition').value;
+  const note = document.getElementById('r-note').value;
+  const sigData = document.getElementById('r-sig').toDataURL('image/png');
+  const rDate = today();
+  const item = findItem(scannedRId);
+  if(item){item.status='in';item.staff='';item.client='';item.borrowDate='';item.dueDate='';}
+
+  callAPI({action:'return',itemId:scannedRId,condition,note,returnDate:rDate,signature:sigData},r=>{
+    if(r && !r.success) console.warn('API回傳：',r.error);
+  });
+
+  document.getElementById('r-success-msg').textContent = scannedRId+' 已確認收回\n衣服狀態：'+condition+'\n庫存已自動更新';
+  ['r-preview','r-form','r-sig-card'].forEach(id=>document.getElementById(id).classList.remove('show'));
+  document.getElementById('r-submit').classList.remove('show');
+  document.getElementById('r-success').classList.add('show');
+  refreshStats();
+}
+
+function resetReturn() { initReturn(); goHome(); }
+
+// ===================== INVENTORY =====================
+function initInventory() {
+  callAPI({action:'getInventory'},r=>{ if(r&&r.items){inventory=r.items;} renderInv(); });
+  renderInv();
+}
+
+function renderInv() {
+  const q = (document.getElementById('inv-q').value||'').toLowerCase();
+  const items = inventory.filter(i=>{
+    if(invTabFilter!=='all' && i.status!==invTabFilter) return false;
+    if(!q) return true;
+    return i.id.toLowerCase().includes(q)||i.name.toLowerCase().includes(q)||(i.client&&i.client.toLowerCase().includes(q));
+  });
+  const el = document.getElementById('inv-list');
+  if(!items.length){
+    el.innerHTML='<div class="empty-state"><div class="empty-icon">🔍</div><div>沒有符合條件的衣服</div></div>';
+    return;
+  }
+  el.innerHTML = items.map(item=>`
+    <div class="inv-item" onclick="showDetail('${item.id}')">
+      <div class="inv-item-icon">${item.status==='in'?'👕':'📤'}</div>
+      <div class="inv-item-info">
+        <div class="inv-item-id">${item.id}</div>
+        <div class="inv-item-sub">${item.status==='in'?item.name:'→ '+item.client+'（'+item.staff+'）'}</div>
+      </div>
+      <span class="inv-chip ${item.status}">${item.status==='in'?'在庫中':'外借中'}</span>
+    </div>`).join('');
+}
+
+function setInvTab(tab,el) {
+  invTabFilter=tab;
+  document.querySelectorAll('.inv-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  renderInv();
+}
+
+function showDetail(id) {
+  const item=findItem(id); if(!item) return;
+  document.getElementById('m-id').textContent=item.id;
+  document.getElementById('m-name').textContent=item.name;
+  const rows = item.status==='in' ?
+    [['目前狀態','在庫中 ✅'],['可借出','是']] :
+    [['目前狀態','外借中 📤'],['借出業務',item.staff||'—'],['借出客戶',item.client||'—'],['借出日期',item.borrowDate||'—'],['預計歸還',item.dueDate||'—']];
+  document.getElementById('m-rows').innerHTML = rows.map(([l,v])=>`
+    <div class="modal-row">
+      <span class="modal-label">${l}</span>
+      <span class="modal-val">${v}</span>
+    </div>`).join('');
+  document.getElementById('modal').classList.add('show');
+}
+
+function closeModal(){ document.getElementById('modal').classList.remove('show'); }
+
+// ===================== SIGNATURE =====================
+function initSig(id) {
+  const c=document.getElementById(id); if(!c||c._ready) return; c._ready=true;
+  const ctx=c.getContext('2d'); let drawing=false,lx=0,ly=0;
+  function pos(e){ const r=c.getBoundingClientRect(),s=e.touches?e.touches[0]:e; return {x:(s.clientX-r.left)*(c.width/r.width),y:(s.clientY-r.top)*(c.height/r.height)}; }
+  function draw(e){if(!drawing)return;const p=pos(e);ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(p.x,p.y);ctx.strokeStyle='#1a1a1a';ctx.lineWidth=2.5;ctx.lineCap='round';ctx.lineJoin='round';ctx.stroke();lx=p.x;ly=p.y;}
+  c.addEventListener('mousedown',e=>{drawing=true;const p=pos(e);lx=p.x;ly=p.y;});
+  c.addEventListener('mousemove',draw);
+  c.addEventListener('mouseup',()=>drawing=false);
+  c.addEventListener('mouseleave',()=>drawing=false);
+  c.addEventListener('touchstart',e=>{e.preventDefault();drawing=true;const p=pos(e);lx=p.x;ly=p.y;},{passive:false});
+  c.addEventListener('touchmove',e=>{e.preventDefault();draw(e);},{passive:false});
+  c.addEventListener('touchend',e=>{e.preventDefault();drawing=false;},{passive:false});
+}
+
+function clearCanvas(id){ const c=document.getElementById(id); if(c) c.getContext('2d').clearRect(0,0,c.width,c.height); }
+function clearSig(p){ clearCanvas(p+'-sig'); }
+
+function hasSig(id){
+  const c=document.getElementById(id); if(!c) return false;
+  const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;
+  for(let i=3;i<d.length;i+=4){if(d[i]>10)return true;} return false;
+}
+
+// ===================== UTILS =====================
+function findItem(id){ return inventory.find(i=>i.id.toUpperCase()===id.toUpperCase()); }
+function today(){ return new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit'}).replace(/\//g,'-'); }
+function showAlert(msg){ alert(msg); }
+
+async function callAPI(payload,cb){
+  if(!GAS_URL){ if(cb)cb(null); return; }
+  try{
+    const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify(payload),headers:{'Content-Type':'application/json'}});
+    const d=await r.json(); if(cb)cb(d);
+  }catch(e){ console.warn('API error:',e); if(cb)cb(null); }
+}
+
+function sendToGAS(){
+  if(!GAS_URL){showAlert('請先在 HTML 檔案中填入 GAS_URL！');return;}
+  callAPI({action:'getInventory'},r=>{ showAlert(r?'✅ 連線成功！\n共 '+r.items?.length+' 件衣服':'❌ 連線失敗，請確認部署設定'); });
+}
+
+// ===================== INIT =====================
+refreshStats();
+</script>
+</body>
+</html>
