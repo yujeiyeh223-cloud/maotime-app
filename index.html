@@ -797,9 +797,9 @@ async function submitBorrow() {
   const r = await callAPIAsync({action:'borrow',itemId:scannedBId,staff,client,phone,borrowDate:bDate,dueDate:due,note});
   if(!r || !r.success){ showAlert('外借登記失敗，請再試一次'); btn.textContent='確認外借 →'; btn.disabled=false; return; }
 
-  // 第二步：傳簽名（白底黑字）
+  // 第二步：分段傳簽名
   const sigData = getCanvasWithWhiteBg('b-sig');
-  await callAPIAsync({action:'uploadSig',recordId:r.recordId,sigData});
+  await uploadSigInChunks(r.recordId, sigData);
 
   if(item){ item.status='out';item.staff=staff;item.client=client;item.borrowDate=bDate;item.dueDate=due; }
   document.getElementById('b-success-msg').textContent = scannedBId+'\n借出給 '+client+'（'+phone+'）\n業務：'+staff+'\n預計 '+due+' 前歸還';
@@ -879,9 +879,9 @@ async function submitReturn() {
   const r = await callAPIAsync({action:'return',itemId:scannedRId,condition,note,returnDate:rDate});
   if(!r || !r.success){ showAlert('歸還登記失敗，請再試一次'); btn.textContent='確認歸還 →'; btn.disabled=false; return; }
 
-  // 第二步：傳簽名（白底黑字）
+  // 第二步：分段傳簽名
   const sigData = getCanvasWithWhiteBg('r-sig');
-  await callAPIAsync({action:'uploadSig',recordId:r.recordId,sigData});
+  await uploadSigInChunks(r.recordId, sigData);
 
   const item = findItem(scannedRId);
   if(item){item.status='in';item.staff='';item.client='';item.borrowDate='';item.dueDate='';}
@@ -976,15 +976,31 @@ function hasSig(id){
 }
 
 // ===================== UTILS =====================
+async function uploadSigInChunks(recordId, sigData) {
+  const CHUNK = 50000; // 每段 50000 字元
+  const total = Math.ceil(sigData.length / CHUNK);
+  for(let i = 0; i < total; i++){
+    const chunk = sigData.substring(i * CHUNK, (i+1) * CHUNK);
+    const ok = await callAPIAsync({
+      action: 'uploadSigChunk',
+      recordId, chunk, index: i, total
+    });
+    if(!ok || !ok.success){ console.warn('簽名上傳失敗 chunk', i); return; }
+  }
+}
+
 function getCanvasWithWhiteBg(canvasId) {
   const src = document.getElementById(canvasId);
   const tmp = document.createElement('canvas');
-  tmp.width = src.width; tmp.height = src.height;
+  // 縮小到最大 400px 寬，減少檔案大小
+  const scale = Math.min(1, 400 / src.width);
+  tmp.width = Math.floor(src.width * scale);
+  tmp.height = Math.floor(src.height * scale);
   const ctx = tmp.getContext('2d');
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, tmp.width, tmp.height);
-  ctx.drawImage(src, 0, 0);
-  return tmp.toDataURL('image/jpeg', 0.8);
+  ctx.drawImage(src, 0, 0, tmp.width, tmp.height);
+  return tmp.toDataURL('image/jpeg', 0.5);
 }
 
 function findItem(id){ return inventory.find(i=>i.id.toUpperCase()===id.toUpperCase()); }
