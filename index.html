@@ -389,7 +389,7 @@ textarea{resize:none;line-height:1.5}
       </div>
       <div>
         <div class="brand-name">卯時設計有限公司</div>
-        <div class="brand-sub">套量服外借管理系統 v8</div>
+        <div class="brand-sub">套量服外借管理系統 v9</div>
       </div>
     </div>
   </div>
@@ -710,7 +710,14 @@ function stopAll() {
 
 function startScanner(divId, onResult) {
   const s = new Html5Qrcode(divId);
-  s.start({facingMode:'environment'},{fps:15,qrbox:function(w,h){const s=Math.min(w,h)*0.7;return{width:s,height:s}},aspectRatio:1.0},
+  const videoConstraints = {
+    facingMode: 'environment',
+    width: { ideal: 1280 },
+    height: { ideal: 720 }
+  };
+  s.start(
+    videoConstraints,
+    { fps:15, qrbox:function(w,h){const m=Math.min(w,h)*0.7;return{width:m,height:m};}, aspectRatio:1.0, videoConstraints },
     text=>{ onResult(text.trim()); s.stop(); },
     ()=>{}
   ).catch(()=>{
