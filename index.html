@@ -156,7 +156,7 @@ textarea{resize:none;line-height:1.5}
 .sig-hint{padding:7px 16px 11px;font-size:11px;color:var(--th)}
 
 /* SUBMIT */
-.submit-btn{display:none;border:none;border-radius:14px;padding:16px;font-size:16px;font-weight:700;cursor:pointer;width:100%;font-family:inherit;transition:transform 0.12s,opacity 0.12s;flex-shrink:0;letter-spacing:0.02em}
+.submit-btn{display:none;border:none;border-radius:14px;padding:16px;font-size:16px;font-weight:700;cursor:pointer;width:100%;font-family:inherit;transition:transform 0.12s,opacity 0.12s;flex-shrink:0;letter-spacing:0.02em;margin-bottom:calc(env(safe-area-inset-bottom,0px) + 4px)}
 .submit-btn.show{display:block}
 .submit-btn:active{transform:scale(0.975);opacity:0.9}
 .submit-btn:disabled{opacity:0.5}
@@ -220,7 +220,7 @@ textarea{resize:none;line-height:1.5}
     </div>
     <div>
       <div class="brand-name">卯時設計有限公司</div>
-      <div class="brand-sub">套量服外借管理系統 v15</div>
+      <div class="brand-sub">套量服外借管理系統 v16</div>
     </div>
     <button class="refresh-btn" id="refresh-btn" onclick="doRefresh()" title="刷新庫存">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
@@ -603,12 +603,23 @@ function stopAll() {
 
 function startScanner(divId, onResult) {
   const s = new Html5Qrcode(divId);
-  const vc = { facingMode:'environment', width:{ideal:1280}, height:{ideal:720} };
+  const vc = {
+    facingMode: { exact: 'environment' },
+    width: { ideal: 1280 },
+    height: { ideal: 720 }
+  };
   s.start(vc,
-    {fps:15, qrbox:function(w,h){const m=Math.min(w,h)*0.7;return{width:m,height:m};}, aspectRatio:1.0, videoConstraints:vc},
+    {fps:15, qrbox:function(w,h){const m=Math.min(w,h)*0.7;return{width:m,height:m};}, aspectRatio:1.0},
     text=>{ onResult(text.trim()); s.stop(); }, ()=>{}
   ).catch(()=>{
-    document.getElementById(divId).innerHTML='<div class="no-cam">⚠️ 無法存取相機<br>請切換至「手動選擇」模式</div>';
+    // exact 失敗時 fallback 到一般模式
+    const s2 = new Html5Qrcode(divId);
+    s2.start({facingMode:'environment'},
+      {fps:15, qrbox:function(w,h){const m=Math.min(w,h)*0.7;return{width:m,height:m};}, aspectRatio:1.0},
+      text=>{ onResult(text.trim()); s2.stop(); }, ()=>{}
+    ).catch(()=>{
+      document.getElementById(divId).innerHTML='<div class="no-cam">⚠️ 無法存取相機<br>請切換至「手動選擇」模式</div>';
+    });
   });
   return s;
 }
@@ -669,22 +680,29 @@ function buildNumGrid(gridId, confirmBtnId, typeKey, count, filterFn) {
 }
 
 // ==================== BORROW ====================
-function initBorrow() {
+function initBorrow(fromReserve) {
   scannedBId=null; selectedBType=''; selectedBNum='';
   ['b-preview','b-form','b-sig-card'].forEach(id=>document.getElementById(id).classList.remove('show'));
   document.getElementById('b-submit').classList.remove('show');
   document.getElementById('b-success').classList.remove('show');
-  document.getElementById('b-scan-card').style.display='block';
-  document.querySelector('#page-borrow .scan-top').style.display='';
-  document.querySelector('#page-borrow .scan-toggle').style.display='';
-  document.getElementById('b-reader-wrap').style.display='block';
-  document.getElementById('b-manual-area').classList.remove('show');
   clearCanvas('b-sig');
   ['b-staff','b-client','b-phone','b-note'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('b-due').value='';
-  buildTypeGrid('b-type-grid','b-num-section','b-num-grid','b-confirm-manual',
-    i=>i.status==='in', k=>selectedBType=k);
-  setBorrowMode('scan');
+
+  if(fromReserve){
+    // 預約轉外借：完全隱藏掃描區，不啟動相機
+    document.getElementById('b-scan-card').style.display='none';
+  } else {
+    // 一般外借：顯示掃描區
+    document.getElementById('b-scan-card').style.display='block';
+    document.querySelector('#page-borrow .scan-top').style.display='';
+    document.querySelector('#page-borrow .scan-toggle').style.display='';
+    document.getElementById('b-reader-wrap').style.display='block';
+    document.getElementById('b-manual-area').classList.remove('show');
+    buildTypeGrid('b-type-grid','b-num-section','b-num-grid','b-confirm-manual',
+      i=>i.status==='in'||i.status==='res', k=>selectedBType=k);
+    setBorrowMode('scan');
+  }
 }
 
 function setBorrowMode(mode){
@@ -995,12 +1013,11 @@ function modalToBorrow(){
   const item=findItem(modalCurrentId);
   if(!item)return;
   closeModal();
-  // 直接進入外借頁，跳過掃描，直接填單
   stopAll();
   document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
   document.getElementById('page-borrow').classList.add('active');
-  initBorrow();
-  // 稍微延遲確保 initBorrow 完成後再填入資料
+  // fromReserve=true：完全跳過掃描器
+  initBorrow(true);
   setTimeout(()=>{
     scannedBId = item.id;
     document.getElementById('b-item-id').textContent = item.id;
@@ -1009,9 +1026,6 @@ function modalToBorrow(){
     document.getElementById('b-form').classList.add('show');
     document.getElementById('b-sig-card').classList.add('show');
     document.getElementById('b-submit').classList.add('show');
-    // 隱藏掃描區
-    document.getElementById('b-scan-card').style.display='none';
-    // 預填資料
     if(item.staff) document.getElementById('b-staff').value=item.staff;
     if(item.client) document.getElementById('b-client').value=item.client;
     if(item.phone) document.getElementById('b-phone').value=item.phone;
