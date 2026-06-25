@@ -165,7 +165,7 @@ textarea{resize:none;line-height:1.5}
 .sb-blue{background:var(--blue);color:#fff}
 
 /* SUCCESS */
-.success-scr{display:none;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:16px;text-align:center;padding:32px}
+.success-scr{display:none;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:16px;text-align:center;padding:32px 32px calc(env(safe-area-inset-bottom,0px) + 32px)}
 .success-scr.show{display:flex}
 .suc-icon{font-size:60px;line-height:1}
 .suc-title{font-size:21px;font-weight:700}
@@ -197,7 +197,7 @@ textarea{resize:none;line-height:1.5}
 /* MODAL */
 .modal-overlay{position:absolute;inset:0;background:rgba(0,0,0,0.5);display:none;align-items:flex-end;z-index:200;backdrop-filter:blur(2px)}
 .modal-overlay.show{display:flex}
-.modal-sheet{background:var(--bp);border-radius:20px 20px 0 0;width:100%;padding:20px;max-height:85vh;overflow-y:auto;padding-bottom:calc(env(safe-area-inset-bottom,0px)+20px)}
+.modal-sheet{background:var(--bp);border-radius:20px 20px 0 0;width:100%;padding:20px;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 32px);max-height:85vh;overflow-y:auto}
 .modal-handle{width:36px;height:4px;background:var(--bm);border-radius:2px;margin:0 auto 16px}
 .modal-id{font-size:16px;font-weight:700;font-family:monospace}
 .modal-name{font-size:14px;color:var(--ts);margin:4px 0 14px}
@@ -220,7 +220,7 @@ textarea{resize:none;line-height:1.5}
     </div>
     <div>
       <div class="brand-name">卯時設計有限公司</div>
-      <div class="brand-sub">套量服外借管理系統 v17</div>
+      <div class="brand-sub">套量服外借管理系統 v19</div>
     </div>
     <button class="refresh-btn" id="refresh-btn" onclick="doRefresh()" title="刷新庫存">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
