@@ -30,12 +30,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-se
 
 /* HEADER */
 .hdr{padding:calc(env(safe-area-inset-top,0px)+14px) 20px 0;background:var(--bs);flex-shrink:0}
-.hdr-inner{display:flex;align-items:center;gap:10px;padding-bottom:4px}
+.hdr-inner{display:flex;align-items:center;gap:10px;padding:0 0 4px 0}
 .logo{width:34px;height:34px;border-radius:9px;background:var(--tp);display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .logo svg{width:17px;height:17px;fill:var(--bs)}
 .brand-name{font-size:13px;font-weight:600;letter-spacing:0.03em}
 .brand-sub{font-size:11px;color:var(--ts)}
-.refresh-btn{margin-left:auto;width:34px;height:34px;border-radius:9px;border:1px solid var(--bl);background:var(--bp);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform 0.3s}
+.refresh-btn{margin-left:auto;width:34px;height:34px;border-radius:9px;border:1px solid var(--bl);background:var(--bp);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform 0.3s;flex-shrink:0}
 .refresh-btn.spinning{transform:rotate(360deg)}
 .last-update{font-size:10px;color:var(--th);text-align:right;padding:2px 0 6px}
 
@@ -68,10 +68,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-se
 .btn-lbl{font-size:18px;font-weight:600;display:block;margin-bottom:2px}
 .btn-desc{font-size:12px;opacity:0.7;display:block}
 .btn-arr{font-size:20px;margin-right:16px;opacity:0.4}
-.btn-borrow{background:#1a1a1a;color:#fff} .btn-borrow .btn-ico{background:rgba(255,255,255,0.06)}
+.btn-borrow{background:var(--red);color:#fff} .btn-borrow .btn-ico{background:rgba(255,255,255,0.1)}
 .btn-return{background:var(--green);color:#fff} .btn-return .btn-ico{background:rgba(255,255,255,0.08)}
 .btn-reserve{background:var(--blue);color:#fff} .btn-reserve .btn-ico{background:rgba(255,255,255,0.08)}
-.btn-inventory{background:var(--bp);color:var(--tp);border:1px solid var(--bl)} .btn-inventory .btn-ico{background:var(--bs)} .btn-inventory .btn-desc{color:var(--ts)}
+.btn-inventory{background:var(--bt);color:var(--tp);border:1px solid var(--bl)} .btn-inventory .btn-ico{background:rgba(0,0,0,0.05)} .btn-inventory .btn-desc{color:var(--ts)}
 
 /* SUB PAGE HEADER */
 .pg-hd{display:flex;align-items:center;gap:12px;margin-bottom:4px;flex-shrink:0}
@@ -105,7 +105,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-se
 .type-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
 .type-btn{padding:10px 8px;border-radius:10px;border:1px solid var(--bl);background:var(--bs);cursor:pointer;font-size:13px;font-weight:500;color:var(--tp);text-align:center;transition:all 0.15s;font-family:inherit}
 .type-btn.selected{background:var(--tp);color:var(--bp);border-color:var(--tp)}
-.num-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;max-height:180px;overflow-y:auto}
+.num-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;overflow:visible}
 .num-btn{padding:9px 4px;border-radius:10px;border:1px solid var(--bl);background:var(--bs);cursor:pointer;font-size:12px;font-weight:600;color:var(--tp);text-align:center;font-family:monospace;transition:all 0.15s}
 .num-btn.selected{background:var(--tp);color:var(--bp);border-color:var(--tp)}
 .num-btn.out{opacity:0.35;cursor:not-allowed}
@@ -214,7 +214,7 @@ textarea{resize:none;line-height:1.5}
     </div>
     <div>
       <div class="brand-name">卯時設計有限公司</div>
-      <div class="brand-sub">套量服外借管理系統 v11</div>
+      <div class="brand-sub">套量服外借管理系統 v13</div>
     </div>
     <button class="refresh-btn" id="refresh-btn" onclick="doRefresh()" title="刷新庫存">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
