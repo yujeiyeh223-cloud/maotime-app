@@ -26,10 +26,16 @@
 }}
 html,body{height:100%;overflow:hidden}
 body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif;background:var(--bs);color:var(--tp);font-size:16px;line-height:1.5}
-#app{max-width:480px;margin:0 auto;height:100vh;display:flex;flex-direction:column;overflow:hidden;position:relative;background:var(--bs)}
+#app{max-width:480px;margin:0 auto;height:100vh;display:flex;flex-direction:column;overflow:hidden;position:relative;background:var(--bs);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
 
 /* HEADER */
-.hdr{padding:calc(env(safe-area-inset-top,0px)+14px) 20px 0;background:var(--bs);flex-shrink:0}
+.hdr{
+  padding-top:calc(env(safe-area-inset-top,0px) + 14px);
+  padding-left:calc(env(safe-area-inset-left,0px) + 20px);
+  padding-right:calc(env(safe-area-inset-right,0px) + 20px);
+  padding-bottom:0;
+  background:var(--bs);flex-shrink:0
+}
 .hdr-inner{display:flex;align-items:center;gap:10px;padding:0 0 4px 0}
 .logo{width:34px;height:34px;border-radius:9px;background:var(--tp);display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .logo svg{width:17px;height:17px;fill:var(--bs)}
@@ -214,7 +220,7 @@ textarea{resize:none;line-height:1.5}
     </div>
     <div>
       <div class="brand-name">卯時設計有限公司</div>
-      <div class="brand-sub">套量服外借管理系統 v13</div>
+      <div class="brand-sub">套量服外借管理系統 v14</div>
     </div>
     <button class="refresh-btn" id="refresh-btn" onclick="doRefresh()" title="刷新庫存">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
