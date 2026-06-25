@@ -207,10 +207,31 @@ textarea{resize:none;line-height:1.5}
 .modal-close{width:100%;margin-top:16px;padding:13px;border:1px solid var(--bl);border-radius:13px;background:var(--bs);font-size:15px;cursor:pointer;font-family:inherit;color:var(--tp);font-weight:600}
 .modal-action{width:100%;margin-top:8px;padding:14px;border:none;border-radius:13px;font-size:15px;cursor:pointer;font-family:inherit;font-weight:700}
 .modal-action.blue{background:var(--blue);color:#fff}
+
+/* UPDATE BANNER */
+.update-banner{
+  display:none;position:fixed;top:0;left:0;right:0;z-index:999;
+  background:#0F6E56;color:#fff;
+  padding:12px 16px;
+  padding-top:calc(env(safe-area-inset-top,0px) + 12px);
+  display:none;align-items:center;gap:10px;
+  font-size:13px;font-weight:500;
+}
+.update-banner.show{display:flex}
+.update-banner-text{flex:1;line-height:1.4}
+.update-btn{background:rgba(255,255,255,0.2);border:none;color:#fff;padding:7px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit}
+.update-dismiss{background:none;border:none;color:rgba(255,255,255,0.7);font-size:20px;cursor:pointer;padding:0 4px;line-height:1}
 </style>
 </head>
 <body>
 <div id="app">
+
+<!-- UPDATE BANNER -->
+<div class="update-banner" id="update-banner">
+  <div class="update-banner-text">🆕 發現新版本，點此更新</div>
+  <button class="update-btn" onclick="doUpdate()">立即更新</button>
+  <button class="update-dismiss" onclick="dismissUpdate()">✕</button>
+</div>
 
 <!-- HEADER -->
 <div class="hdr">
@@ -220,7 +241,7 @@ textarea{resize:none;line-height:1.5}
     </div>
     <div>
       <div class="brand-name">卯時設計有限公司</div>
-      <div class="brand-sub">套量服外借管理系統 v19</div>
+      <div class="brand-sub">套量服外借管理系統 v20</div>
     </div>
     <button class="refresh-btn" id="refresh-btn" onclick="doRefresh()" title="刷新庫存">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
@@ -1105,16 +1126,63 @@ document.getElementById('d-res').textContent='…';
 document.getElementById('d-out').textContent='…';
 loadInventory();
 
+// ==================== UPDATE ====================
+const CURRENT_VERSION = 'v20';
+let pendingWorker = null;
+
+function showUpdateBanner(){
+  document.getElementById('update-banner').classList.add('show');
+  // header 往下推，避免橫幅遮住內容
+  document.querySelector('.hdr').style.marginTop = '52px';
+}
+
+function dismissUpdate(){
+  document.getElementById('update-banner').classList.remove('show');
+  document.querySelector('.hdr').style.marginTop = '';
+}
+
+function doUpdate(){
+  if(pendingWorker){ pendingWorker.postMessage({action:'skipWaiting'}); }
+  else { window.location.reload(true); }
+}
+
+// 檢查遠端版本（從 sw.js 讀取版本號）
+async function checkVersion(){
+  try{
+    const r = await fetch('/maotime-app/sw.js?t='+Date.now());
+    const text = await r.text();
+    const match = text.match(/CACHE_VERSION\s*=\s*'(v\d+)'/);
+    if(match && match[1] !== CURRENT_VERSION){
+      showUpdateBanner();
+    }
+  }catch(e){}
+}
+
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('/maotime-app/sw.js').then(reg=>{
+    // 立即檢查是否有等待中的新版本
+    if(reg.waiting){ pendingWorker=reg.waiting; showUpdateBanner(); }
+
     reg.addEventListener('updatefound',()=>{
       const nw=reg.installing;
       nw.addEventListener('statechange',()=>{
-        if(nw.state==='installed'&&navigator.serviceWorker.controller) nw.postMessage({action:'skipWaiting'});
+        if(nw.state==='installed'){
+          if(navigator.serviceWorker.controller){
+            pendingWorker=nw;
+            showUpdateBanner();
+          }
+        }
       });
     });
+
+    // 主動檢查更新
+    reg.update();
   });
+
   navigator.serviceWorker.addEventListener('controllerchange',()=>window.location.reload());
+
+  // 開啟時也比對版本號
+  checkVersion();
 }
 </script>
 </body>
