@@ -241,7 +241,7 @@ textarea{resize:none;line-height:1.5}
     </div>
     <div>
       <div class="brand-name">卯時設計有限公司</div>
-      <div class="brand-sub">套量服外借管理系統 v20</div>
+      <div class="brand-sub">套量服外借管理系統 v21</div>
     </div>
     <button class="refresh-btn" id="refresh-btn" onclick="doRefresh()" title="刷新庫存">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
@@ -951,6 +951,11 @@ function resetReserve(){initReserve();goHome();}
 
 // ==================== INVENTORY ====================
 function initInventory(){
+  // 同步分頁按鈕 active 狀態
+  document.querySelectorAll('.inv-tab').forEach(t=>t.classList.remove('active'));
+  const tabMap={'in':'inv-tab-in','res':'inv-tab-res','out':'inv-tab-out'};
+  const activeTab = document.getElementById(tabMap[invTabFilter]);
+  if(activeTab) activeTab.classList.add('active');
   renderInvFilters();
   renderInv();
 }
@@ -1127,7 +1132,7 @@ document.getElementById('d-out').textContent='…';
 loadInventory();
 
 // ==================== UPDATE ====================
-const CURRENT_VERSION = 'v20';
+const CURRENT_VERSION = 'v21';
 let pendingWorker = null;
 
 function showUpdateBanner(){
