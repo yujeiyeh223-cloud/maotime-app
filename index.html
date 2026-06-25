@@ -244,7 +244,7 @@ textarea{resize:none;line-height:1.5}
     </div>
     <div>
       <div class="brand-name">卯時設計有限公司</div>
-      <div class="brand-sub">套量服外借管理系統 v29</div>
+      <div class="brand-sub">套量服外借管理系統 v31</div>
     </div>
     <button class="refresh-btn" id="refresh-btn" onclick="doRefresh()" title="刷新庫存">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
@@ -719,6 +719,7 @@ function initBorrow(fromReserve) {
   ['b-preview','b-form','b-sig-card'].forEach(id=>document.getElementById(id).classList.remove('show'));
   document.getElementById('b-submit').classList.remove('show');
   document.getElementById('b-success').classList.remove('show');
+  document.getElementById('page-borrow').style.overflowY='auto';
   clearCanvas('b-sig');
   ['b-staff','b-client','b-phone','b-note'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('b-due').value='';
@@ -769,6 +770,7 @@ function onBorrow(id){
   document.getElementById('b-form').classList.add('show');
   document.getElementById('b-sig-card').classList.add('show');
   document.getElementById('b-submit').classList.add('show');
+  document.getElementById('page-borrow').style.overflowY='hidden';
   hideScanCard('b');
   initSig('b-sig');
   if(borrowScanner){try{borrowScanner.stop();}catch(e){}borrowScanner=null;}
@@ -804,6 +806,7 @@ async function submitBorrow(){
   };
   ['b-preview','b-form','b-sig-card'].forEach(id=>document.getElementById(id).classList.remove('show'));
   btn.classList.remove('show');btn.textContent='確認外借 →';btn.disabled=false;
+  document.getElementById('page-borrow').style.overflowY='auto';
   document.getElementById('b-success').classList.add('show');
   updateDashboard();
 }
@@ -816,6 +819,7 @@ function initReturn(){
   ['r-preview','r-form','r-sig-card'].forEach(id=>document.getElementById(id).classList.remove('show'));
   document.getElementById('r-submit').classList.remove('show');
   document.getElementById('r-success').classList.remove('show');
+  document.getElementById('page-return').style.overflowY='auto';
   document.getElementById('r-scan-card').style.display='block';
   document.querySelector('#page-return .scan-top').style.display='';
   document.querySelector('#page-return .scan-toggle').style.display='';
@@ -861,6 +865,7 @@ function onReturn(id){
   document.getElementById('r-form').classList.add('show');
   document.getElementById('r-sig-card').classList.add('show');
   document.getElementById('r-submit').classList.add('show');
+  document.getElementById('page-return').style.overflowY='hidden';
   hideScanCard('r');
   initSig('r-sig');
   if(returnScanner){try{returnScanner.stop();}catch(e){}returnScanner=null;}
@@ -903,6 +908,7 @@ async function submitReturn(){
   document.getElementById('r-success-msg').textContent=successMsg;
   ['r-preview','r-form','r-sig-card'].forEach(id=>document.getElementById(id).classList.remove('show'));
   btn.classList.remove('show');btn.textContent='確認歸還 →';btn.disabled=false;
+  document.getElementById('page-return').style.overflowY='auto';
   document.getElementById('r-success').classList.add('show');
   updateDashboard();
 }
@@ -1354,6 +1360,7 @@ function modalToBorrow(){
     document.getElementById('b-form').classList.add('show');
     document.getElementById('b-sig-card').classList.add('show');
     document.getElementById('b-submit').classList.add('show');
+    document.getElementById('page-borrow').style.overflowY='hidden';
     if(item.staff) document.getElementById('b-staff').value=item.staff;
     if(item.client) document.getElementById('b-client').value=item.client;
     if(item.phone) document.getElementById('b-phone').value=item.phone;
@@ -1377,22 +1384,15 @@ async function modalCancelReserve(){
 
 // ==================== SIGNATURE ====================
 function initSig(id){
-  const c=document.getElementById(id);if(!c)return;
-  // 移除舊的事件（如果有的話）
-  const newC=c.cloneNode(true);
-  c.parentNode.replaceChild(newC,c);
-  const canvas=document.getElementById(id);
-  const ctx=canvas.getContext('2d');
+  const c=document.getElementById(id);
+  if(!c||c._sigBound)return;
+  c._sigBound=true;
+  const ctx=c.getContext('2d');
   let drawing=false,lx=0,ly=0;
-
   function pos(e){
-    const r=canvas.getBoundingClientRect();
+    const r=c.getBoundingClientRect();
     const s=e.touches?e.touches[0]:e;
-    // 用 offsetX/offsetY 更精準，fallback 到 clientX/Y
-    return {
-      x:(s.clientX-r.left)*(canvas.width/r.width),
-      y:(s.clientY-r.top)*(canvas.height/r.height)
-    };
+    return{x:(s.clientX-r.left)*(c.width/r.width),y:(s.clientY-r.top)*(c.height/r.height)};
   }
   function draw(e){
     if(!drawing)return;
@@ -1401,13 +1401,13 @@ function initSig(id){
     ctx.strokeStyle='#1a1a1a';ctx.lineWidth=2.5;ctx.lineCap='round';ctx.lineJoin='round';ctx.stroke();
     lx=p.x;ly=p.y;
   }
-  canvas.addEventListener('mousedown',e=>{drawing=true;const p=pos(e);lx=p.x;ly=p.y;});
-  canvas.addEventListener('mousemove',draw);
-  canvas.addEventListener('mouseup',()=>drawing=false);
-  canvas.addEventListener('mouseleave',()=>drawing=false);
-  canvas.addEventListener('touchstart',e=>{e.preventDefault();drawing=true;const p=pos(e);lx=p.x;ly=p.y;},{passive:false});
-  canvas.addEventListener('touchmove',e=>{e.preventDefault();draw(e);},{passive:false});
-  canvas.addEventListener('touchend',e=>{e.preventDefault();drawing=false;},{passive:false});
+  c.addEventListener('mousedown',e=>{drawing=true;const p=pos(e);lx=p.x;ly=p.y;});
+  c.addEventListener('mousemove',draw);
+  c.addEventListener('mouseup',()=>drawing=false);
+  c.addEventListener('mouseleave',()=>drawing=false);
+  c.addEventListener('touchstart',e=>{e.preventDefault();drawing=true;const p=pos(e);lx=p.x;ly=p.y;},{passive:false});
+  c.addEventListener('touchmove',e=>{e.preventDefault();draw(e);},{passive:false});
+  c.addEventListener('touchend',e=>{e.preventDefault();drawing=false;},{passive:false});
 }
 function clearCanvas(id){
   const c=document.getElementById(id);
@@ -1484,9 +1484,11 @@ document.getElementById('d-out').textContent='…';
 document.getElementById('d-overdue').textContent='…';
 setDateMins();
 loadInventory();
+// 預先初始化所有簽名 canvas（事件在觸碰時才計算座標，不受 display:none 影響）
+['b-sig','r-sig'].forEach(id=>initSig(id));
 
 // ==================== UPDATE ====================
-const CURRENT_VERSION = 'v29';
+const CURRENT_VERSION = 'v31';
 let pendingWorker = null;
 
 function showUpdateBanner(){
