@@ -1,6 +1,6 @@
 // 卯時設計 套量服管理系統 - Service Worker
 // 版本號每次更新 HTML 時一起改，確保快取強制更新
-const CACHE_VERSION = 'v28';
+const CACHE_VERSION = 'v29';
 const CACHE_NAME = 'maotime-' + CACHE_VERSION;
 
 // 安裝：快取主要檔案
