@@ -244,7 +244,7 @@ textarea{resize:none;line-height:1.5}
     </div>
     <div>
       <div class="brand-name">卯時設計有限公司</div>
-      <div class="brand-sub">套量服外借管理系統 v26</div>
+      <div class="brand-sub">套量服外借管理系統 v27</div>
     </div>
     <button class="refresh-btn" id="refresh-btn" onclick="doRefresh()" title="刷新庫存">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
@@ -1336,6 +1336,8 @@ async function buildReceiptCanvas(ctx, W, PAD, data, sigH){
 }
 
 function closeModal(){document.getElementById('modal').classList.remove('show');}
+
+function modalToBorrow(){
   const item=findItem(modalCurrentId);
   if(!item)return;
   closeModal();
@@ -1461,7 +1463,7 @@ setDateMins();
 loadInventory();
 
 // ==================== UPDATE ====================
-const CURRENT_VERSION = 'v26';
+const CURRENT_VERSION = 'v27';
 let pendingWorker = null;
 
 function showUpdateBanner(){
