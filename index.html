@@ -244,7 +244,7 @@ textarea{resize:none;line-height:1.5}
     </div>
     <div>
       <div class="brand-name">卯時設計有限公司</div>
-      <div class="brand-sub">套量服外借管理系統 v25</div>
+      <div class="brand-sub">套量服外借管理系統 v26</div>
     </div>
     <button class="refresh-btn" id="refresh-btn" onclick="doRefresh()" title="刷新庫存">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
@@ -1078,6 +1078,7 @@ function showDetail(id){
   // 預設都隱藏
   actionBtn.style.display='none'; cancelBtn.style.display='none'; receiptBtn.style.display='none';
   let rows=[];
+  if(item.status==='in'){
     rows=[['目前狀態','在庫中 ✅'],['可借出','是']];
   } else if(item.status==='res'){
     rows=[['目前狀態','預約中 📅'],['負責業務',item.staff||'—'],['預約客戶',item.client||'—'],['客戶電話',item.phone||'—'],['預計借出',item.borrowDate||'—'],['預計歸還',item.dueDate||'—']];
@@ -1460,7 +1461,7 @@ setDateMins();
 loadInventory();
 
 // ==================== UPDATE ====================
-const CURRENT_VERSION = 'v25';
+const CURRENT_VERSION = 'v26';
 let pendingWorker = null;
 
 function showUpdateBanner(){
