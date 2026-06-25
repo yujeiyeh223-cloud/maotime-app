@@ -241,7 +241,7 @@ textarea{resize:none;line-height:1.5}
     </div>
     <div>
       <div class="brand-name">卯時設計有限公司</div>
-      <div class="brand-sub">套量服外借管理系統 v21</div>
+      <div class="brand-sub">套量服外借管理系統 v22</div>
     </div>
     <button class="refresh-btn" id="refresh-btn" onclick="doRefresh()" title="刷新庫存">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
@@ -1123,16 +1123,31 @@ async function uploadSigPost(recordId,sigData){
 function findItem(id){return inventory.find(i=>i.id.toUpperCase()===id.toUpperCase());}
 function today(){return new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit'}).replace(/\//g,'-');}
 
+function tomorrow(){
+  const d = new Date();
+  d.setDate(d.getDate()+1);
+  return d.toISOString().split('T')[0];
+}
+
+function setDateMins(){
+  const t = tomorrow();
+  ['b-due','res-borrow-date','res-due'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.min = t;
+  });
+}
+
 // ==================== INIT ====================
 document.getElementById('d-bversion').textContent='…';
 document.getElementById('d-cversion').textContent='…';
 document.getElementById('d-hdt').textContent='…';
 document.getElementById('d-res').textContent='…';
 document.getElementById('d-out').textContent='…';
+setDateMins();
 loadInventory();
 
 // ==================== UPDATE ====================
-const CURRENT_VERSION = 'v21';
+const CURRENT_VERSION = 'v22';
 let pendingWorker = null;
 
 function showUpdateBanner(){
