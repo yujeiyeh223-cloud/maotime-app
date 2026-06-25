@@ -9,684 +9,540 @@
 <title>卯時設計 套量服管理</title>
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <style>
-/* ==================== RESET & BASE ==================== */
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{
-  --bg-primary:#ffffff;
-  --bg-secondary:#f5f5f3;
-  --bg-tertiary:#eeede9;
-  --text-primary:#1a1a1a;
-  --text-secondary:#6b6b68;
-  --text-hint:#a8a8a5;
-  --border-light:rgba(0,0,0,0.08);
-  --border-mid:rgba(0,0,0,0.15);
-  --accent-dark:#1a1a1a;
-  --accent-green:#0F6E56;
-  --accent-green-light:#E1F5EE;
-  --accent-red:#D85A30;
-  --accent-red-light:#FAECE7;
-  --radius-sm:8px;
-  --radius-md:12px;
-  --radius-lg:16px;
-  --radius-xl:20px;
+  --bp:#ffffff;--bs:#f5f5f3;--bt:#eeede9;
+  --tp:#1a1a1a;--ts:#6b6b68;--th:#a8a8a5;
+  --bl:rgba(0,0,0,0.08);--bm:rgba(0,0,0,0.15);
+  --green:#0F6E56;--green-l:#E1F5EE;
+  --red:#D85A30;--red-l:#FAECE7;
+  --blue:#1D5FA8;--blue-l:#E3EEF9;
+  --orange:#C47B00;--orange-l:#FDF2DC;
 }
-@media (prefers-color-scheme:dark){:root{
-  --bg-primary:#1c1c1e;
-  --bg-secondary:#2c2c2e;
-  --bg-tertiary:#3a3a3c;
-  --text-primary:#f5f5f0;
-  --text-secondary:#9898a0;
-  --text-hint:#555560;
-  --border-light:rgba(255,255,255,0.08);
-  --border-mid:rgba(255,255,255,0.15);
+@media(prefers-color-scheme:dark){:root{
+  --bp:#1c1c1e;--bs:#2c2c2e;--bt:#3a3a3c;
+  --tp:#f5f5f0;--ts:#9898a0;--th:#555560;
+  --bl:rgba(255,255,255,0.08);--bm:rgba(255,255,255,0.15);
 }}
-
 html,body{height:100%;overflow:hidden}
-body{
-  font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif;
-  background:var(--bg-secondary);
-  color:var(--text-primary);
-  font-size:16px;
-  line-height:1.5;
-}
+body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif;background:var(--bs);color:var(--tp);font-size:16px;line-height:1.5}
+#app{max-width:480px;margin:0 auto;height:100vh;display:flex;flex-direction:column;overflow:hidden;position:relative;background:var(--bs)}
 
-/* ==================== APP SHELL ==================== */
-#app{
-  max-width:480px;
-  margin:0 auto;
-  height:100vh;
-  display:flex;
-  flex-direction:column;
-  overflow:hidden;
-  position:relative;
-  background:var(--bg-secondary);
-}
-
-/* ==================== HEADER ==================== */
-.header{
-  padding:env(safe-area-inset-top,16px) 20px 0;
-  padding-top:calc(env(safe-area-inset-top,0px) + 16px);
-  background:var(--bg-secondary);
-  flex-shrink:0;
-}
-.header-inner{display:flex;align-items:center;gap:10px;padding-bottom:4px}
-.logo-mark{
-  width:36px;height:36px;border-radius:9px;
-  background:var(--text-primary);
-  display:flex;align-items:center;justify-content:center;flex-shrink:0;
-}
-.logo-mark svg{width:18px;height:18px;fill:var(--bg-secondary)}
+/* HEADER */
+.hdr{padding:calc(env(safe-area-inset-top,0px)+14px) 20px 0;background:var(--bs);flex-shrink:0}
+.hdr-inner{display:flex;align-items:center;gap:10px;padding-bottom:4px}
+.logo{width:34px;height:34px;border-radius:9px;background:var(--tp);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.logo svg{width:17px;height:17px;fill:var(--bs)}
 .brand-name{font-size:13px;font-weight:600;letter-spacing:0.03em}
-.brand-sub{font-size:11px;color:var(--text-secondary)}
+.brand-sub{font-size:11px;color:var(--ts)}
+.refresh-btn{margin-left:auto;width:34px;height:34px;border-radius:9px;border:1px solid var(--bl);background:var(--bp);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform 0.3s}
+.refresh-btn.spinning{transform:rotate(360deg)}
+.last-update{font-size:10px;color:var(--th);text-align:right;padding:2px 0 6px}
 
-/* ==================== PAGES ==================== */
-.page{
-  display:none;flex:1;overflow-y:auto;padding:16px 20px;
-  flex-direction:column;gap:14px;
-  padding-bottom:calc(env(safe-area-inset-bottom,0px) + 32px);
-  -webkit-overflow-scrolling:touch;
-}
+/* PAGES */
+.page{display:none;flex:1;overflow-y:auto;padding:14px 20px;flex-direction:column;gap:12px;padding-bottom:calc(env(safe-area-inset-bottom,0px)+28px);-webkit-overflow-scrolling:touch}
 .page.active{display:flex}
 
-/* ==================== HOME ==================== */
-.greeting h1{font-size:24px;font-weight:600;line-height:1.3;margin:12px 0 4px}
-.greeting p{font-size:14px;color:var(--text-secondary)}
+/* HOME */
+.greeting h1{font-size:22px;font-weight:600;line-height:1.3;margin:8px 0 3px}
+.greeting p{font-size:13px;color:var(--ts)}
 
-.stats-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.stat-card{
-  background:var(--bg-primary);border-radius:var(--radius-md);
-  border:1px solid var(--border-light);padding:14px 16px;
-}
-.stat-num{font-size:28px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums}
-.stat-label{font-size:12px;color:var(--text-secondary);margin-top:4px}
-.stat-card.green .stat-num{color:var(--accent-green)}
-.stat-card.orange .stat-num{color:var(--accent-red)}
+/* DASHBOARD */
+.dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.dash-card{background:var(--bp);border-radius:14px;border:1px solid var(--bl);padding:13px 14px;cursor:pointer;transition:transform 0.1s,border-color 0.15s;position:relative;overflow:hidden}
+.dash-card:active{transform:scale(0.97)}
+.dash-card .d-num{font-size:26px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.dash-card .d-label{font-size:11px;color:var(--ts);margin-top:4px}
+.dash-card .d-dot{position:absolute;top:10px;right:10px;width:8px;height:8px;border-radius:50%}
+.dash-card.green .d-num{color:var(--green)} .dash-card.green .d-dot{background:var(--green)}
+.dash-card.blue  .d-num{color:var(--blue)}  .dash-card.blue  .d-dot{background:var(--blue)}
+.dash-card.orange .d-num{color:var(--orange)} .dash-card.orange .d-dot{background:var(--orange)}
+.dash-card.red   .d-num{color:var(--red)}   .dash-card.red   .d-dot{background:var(--red)}
 
-.main-btn{
-  border:none;border-radius:var(--radius-lg);padding:0;cursor:pointer;
-  width:100%;display:flex;align-items:center;gap:0;overflow:hidden;
-  transition:transform 0.12s,opacity 0.12s;position:relative;min-height:80px;
-}
-.main-btn:active{transform:scale(0.975);opacity:0.92}
-.btn-icon-area{
-  width:76px;display:flex;align-items:center;justify-content:center;
-  align-self:stretch;flex-shrink:0;
-}
-.btn-content{flex:1;text-align:left;padding:18px 0 18px 4px}
-.btn-label{font-size:19px;font-weight:600;display:block;margin-bottom:3px}
+/* MAIN BUTTONS */
+.main-btns{display:flex;flex-direction:column;gap:10px}
+.main-btn{border:none;border-radius:16px;padding:0;cursor:pointer;width:100%;display:flex;align-items:center;overflow:hidden;transition:transform 0.12s,opacity 0.12s;min-height:72px}
+.main-btn:active{transform:scale(0.975);opacity:0.9}
+.btn-ico{width:68px;display:flex;align-items:center;justify-content:center;align-self:stretch;flex-shrink:0}
+.btn-txt{flex:1;text-align:left;padding:16px 0 16px 4px}
+.btn-lbl{font-size:18px;font-weight:600;display:block;margin-bottom:2px}
 .btn-desc{font-size:12px;opacity:0.7;display:block}
-.btn-arrow{font-size:22px;margin-right:18px;opacity:0.4}
+.btn-arr{font-size:20px;margin-right:16px;opacity:0.4}
+.btn-borrow{background:#1a1a1a;color:#fff} .btn-borrow .btn-ico{background:rgba(255,255,255,0.06)}
+.btn-return{background:var(--green);color:#fff} .btn-return .btn-ico{background:rgba(255,255,255,0.08)}
+.btn-reserve{background:var(--blue);color:#fff} .btn-reserve .btn-ico{background:rgba(255,255,255,0.08)}
+.btn-inventory{background:var(--bp);color:var(--tp);border:1px solid var(--bl)} .btn-inventory .btn-ico{background:var(--bs)} .btn-inventory .btn-desc{color:var(--ts)}
 
-.btn-borrow{background:#1a1a1a;color:#fff}
-.btn-borrow .btn-icon-area{background:rgba(255,255,255,0.06)}
-.btn-return{background:var(--accent-green);color:#fff}
-.btn-return .btn-icon-area{background:rgba(255,255,255,0.08)}
-.btn-inventory{
-  background:var(--bg-primary);color:var(--text-primary);
-  border:1px solid var(--border-light);
-}
-.btn-inventory .btn-icon-area{background:var(--bg-secondary)}
-.btn-inventory .btn-desc{color:var(--text-secondary)}
-
-/* ==================== SUB-PAGE HEADER ==================== */
-.page-hd{display:flex;align-items:center;gap:12px;margin-bottom:4px;flex-shrink:0}
-.back-btn{
-  width:38px;height:38px;border:1px solid var(--border-mid);border-radius:10px;
-  background:var(--bg-primary);cursor:pointer;display:flex;align-items:center;
-  justify-content:center;color:var(--text-primary);font-size:20px;flex-shrink:0;
-  transition:background 0.12s;
-}
-.back-btn:active{background:var(--bg-secondary)}
-.page-title{font-size:19px;font-weight:600}
-.page-badge{
-  font-size:10px;padding:3px 8px;border-radius:20px;font-weight:700;
-  letter-spacing:0.06em;margin-left:auto;
-}
+/* SUB PAGE HEADER */
+.pg-hd{display:flex;align-items:center;gap:12px;margin-bottom:4px;flex-shrink:0}
+.back-btn{width:36px;height:36px;border:1px solid var(--bm);border-radius:10px;background:var(--bp);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--tp);font-size:20px;flex-shrink:0;transition:background 0.12s}
+.back-btn:active{background:var(--bs)}
+.pg-title{font-size:18px;font-weight:600}
+.pg-badge{font-size:10px;padding:3px 8px;border-radius:20px;font-weight:700;letter-spacing:0.06em;margin-left:auto}
 .badge-borrow{background:#1a1a1a;color:#fff}
-.badge-return{background:var(--accent-green);color:#fff}
+.badge-return{background:var(--green);color:#fff}
+.badge-reserve{background:var(--blue);color:#fff}
 
-/* ==================== SCANNER CARD ==================== */
-.scanner-card{
-  background:var(--bg-primary);border-radius:var(--radius-lg);
-  border:1px solid var(--border-light);overflow:hidden;flex-shrink:0;
-}
-.scanner-top{
-  padding:14px 16px 12px;border-bottom:1px solid var(--border-light);
-  display:flex;align-items:center;gap:12px;
-}
-.scanner-icon{
-  width:38px;height:38px;border-radius:10px;
-  display:flex;align-items:center;justify-content:center;flex-shrink:0;
-}
-.scanner-icon.dark{background:#1a1a1a}
-.scanner-icon.green{background:var(--accent-green)}
-.scanner-label{font-size:14px;font-weight:600}
-.scanner-desc{font-size:12px;color:var(--text-secondary)}
-
+/* SCANNER */
+.scan-card{background:var(--bp);border-radius:16px;border:1px solid var(--bl);overflow:hidden;flex-shrink:0}
+.scan-top{padding:13px 16px 11px;border-bottom:1px solid var(--bl);display:flex;align-items:center;gap:12px}
+.scan-ico{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.scan-ico.dark{background:#1a1a1a} .scan-ico.green{background:var(--green)} .scan-ico.blue{background:var(--blue)}
+.scan-lbl{font-size:13px;font-weight:600} .scan-desc{font-size:12px;color:var(--ts)}
 .scan-toggle{display:flex;gap:6px;padding:10px 14px}
-.toggle-btn{
-  flex:1;padding:9px 6px;border-radius:9px;border:1px solid var(--border-light);
-  background:var(--bg-secondary);cursor:pointer;font-size:12px;
-  color:var(--text-secondary);transition:all 0.15s;font-family:inherit;
-}
-.toggle-btn.active{
-  background:var(--bg-primary);border-color:var(--border-mid);
-  color:var(--text-primary);font-weight:600;
-}
+.tog-btn{flex:1;padding:9px 6px;border-radius:9px;border:1px solid var(--bl);background:var(--bs);cursor:pointer;font-size:12px;color:var(--ts);transition:all 0.15s;font-family:inherit}
+.tog-btn.active{background:var(--bp);border-color:var(--bm);color:var(--tp);font-weight:600}
+.scan-hint{padding:8px 16px 12px;font-size:12px;color:var(--ts);text-align:center}
+.reader-wrap{min-height:240px;overflow:hidden}
+.reader-wrap video{width:100%!important;height:auto!important}
+.no-cam{padding:32px 16px;text-align:center;font-size:13px;color:var(--ts);line-height:1.7}
 
-#borrow-reader-wrap, #return-reader-wrap{min-height:280px;overflow:hidden}
-#borrow-reader-wrap > div:first-child, #return-reader-wrap > div:first-child{width:100%!important}
-#borrow-reader-wrap video, #return-reader-wrap video{width:100%!important;height:auto!important;object-fit:cover}
-.no-cam-msg{
-  padding:32px 16px;text-align:center;font-size:13px;
-  color:var(--text-secondary);line-height:1.7;
-}
-
+/* MANUAL - 階層選單 */
 .manual-area{display:none;padding:0 14px 14px}
 .manual-area.show{display:block}
-.manual-row{display:flex;gap:8px}
-.scan-hint{
-  padding:8px 16px 12px;font-size:12px;
-  color:var(--text-secondary);text-align:center;
-}
+.step-row{display:flex;flex-direction:column;gap:8px}
+.step-label{font-size:11px;font-weight:700;color:var(--ts);letter-spacing:0.05em;text-transform:uppercase;margin-bottom:2px}
+.type-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
+.type-btn{padding:10px 8px;border-radius:10px;border:1px solid var(--bl);background:var(--bs);cursor:pointer;font-size:13px;font-weight:500;color:var(--tp);text-align:center;transition:all 0.15s;font-family:inherit}
+.type-btn.selected{background:var(--tp);color:var(--bp);border-color:var(--tp)}
+.num-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;max-height:180px;overflow-y:auto}
+.num-btn{padding:9px 4px;border-radius:10px;border:1px solid var(--bl);background:var(--bs);cursor:pointer;font-size:12px;font-weight:600;color:var(--tp);text-align:center;font-family:monospace;transition:all 0.15s}
+.num-btn.selected{background:var(--tp);color:var(--bp);border-color:var(--tp)}
+.num-btn.out{opacity:0.35;cursor:not-allowed}
+.num-btn.reserved{border-color:var(--blue);color:var(--blue)}
+.confirm-manual-btn{width:100%;padding:12px;border:none;border-radius:11px;background:var(--tp);color:var(--bp);font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:4px;display:none}
+.confirm-manual-btn.show{display:block}
 
-/* Scanned item preview */
-.scanned-preview{display:none;border-top:1px solid var(--border-light)}
-.scanned-preview.show{display:block}
-.preview-inner{
-  display:flex;align-items:center;gap:12px;
-  padding:14px 16px;background:var(--bg-secondary);
-}
-.item-icon-box{
-  width:42px;height:42px;border-radius:11px;
-  display:flex;align-items:center;justify-content:center;flex-shrink:0;
-}
-.item-icon-box.dark{background:#1a1a1a}
-.item-icon-box.green{background:var(--accent-green)}
-.preview-id{font-size:13px;font-weight:600;font-family:ui-monospace,monospace}
-.preview-meta{font-size:12px;color:var(--text-secondary);margin-top:2px}
-.chip{
-  font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;
-  margin-left:auto;flex-shrink:0;
-}
-.chip-in{background:var(--accent-green-light);color:#0F6E56}
-.chip-out{background:var(--accent-red-light);color:#993C1D}
+/* SCANNED PREVIEW */
+.scanned-prev{display:none;border-top:1px solid var(--bl)}
+.scanned-prev.show{display:block}
+.prev-inner{display:flex;align-items:center;gap:12px;padding:13px 16px;background:var(--bs)}
+.prev-ico{width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.prev-ico.dark{background:#1a1a1a} .prev-ico.green{background:var(--green)} .prev-ico.blue{background:var(--blue)}
+.prev-id{font-size:13px;font-weight:600;font-family:monospace}
+.prev-meta{font-size:12px;color:var(--ts);margin-top:2px}
+.chip{font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;margin-left:auto;flex-shrink:0}
+.chip-in{background:var(--green-l);color:var(--green)}
+.chip-out{background:var(--red-l);color:var(--red)}
+.chip-res{background:var(--blue-l);color:var(--blue)}
 
-/* ==================== FORM CARD ==================== */
-.form-card{
-  background:var(--bg-primary);border-radius:var(--radius-lg);
-  border:1px solid var(--border-light);padding:16px;
-  display:none;flex-direction:column;gap:14px;
-}
+/* FORM */
+.form-card{background:var(--bp);border-radius:16px;border:1px solid var(--bl);padding:16px;display:none;flex-direction:column;gap:13px}
 .form-card.show{display:flex}
-
-.field-group{display:flex;flex-direction:column;gap:6px}
-.field-label{font-size:11px;font-weight:700;color:var(--text-secondary);letter-spacing:0.05em;text-transform:uppercase}
-
-input[type=text],input[type=date],input[type=tel],select,textarea{
-  width:100%;padding:11px 13px;border-radius:10px;
-  border:1px solid var(--border-light);background:var(--bg-secondary);
-  font-size:15px;color:var(--text-primary);font-family:inherit;outline:none;
-  transition:border-color 0.15s,background 0.15s;
-  -webkit-appearance:none;
-}
-input:focus,select:focus,textarea:focus{
-  border-color:var(--border-mid);background:var(--bg-primary);
-}
+.field-grp{display:flex;flex-direction:column;gap:5px}
+.field-lbl{font-size:11px;font-weight:700;color:var(--ts);letter-spacing:0.05em;text-transform:uppercase}
+input[type=text],input[type=date],input[type=tel],select,textarea{width:100%;padding:11px 13px;border-radius:10px;border:1px solid var(--bl);background:var(--bs);font-size:15px;color:var(--tp);font-family:inherit;outline:none;transition:border-color 0.15s,background 0.15s;-webkit-appearance:none}
+input:focus,select:focus,textarea:focus{border-color:var(--bm);background:var(--bp)}
 select{cursor:pointer}
 textarea{resize:none;line-height:1.5}
-
-.info-box{
-  background:var(--bg-secondary);border-radius:var(--radius-sm);
-  padding:13px;display:flex;flex-direction:column;gap:8px;
-}
-.info-box-title{font-size:11px;font-weight:700;color:var(--text-secondary);margin-bottom:2px;letter-spacing:0.05em;text-transform:uppercase}
+.info-box{background:var(--bs);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:7px}
+.info-box-title{font-size:11px;font-weight:700;color:var(--ts);margin-bottom:2px;letter-spacing:0.05em;text-transform:uppercase}
 .info-row{display:flex;justify-content:space-between;font-size:13px;gap:12px}
-.info-row-label{color:var(--text-secondary)}
-.info-row-val{font-weight:600;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:55%}
+.info-lbl{color:var(--ts)} .info-val{font-weight:600;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:55%}
 
-/* ==================== SIGNATURE ==================== */
-.sig-card{
-  background:var(--bg-primary);border-radius:var(--radius-lg);
-  border:1px solid var(--border-light);overflow:hidden;display:none;flex-shrink:0;
-}
+/* SIGNATURE */
+.sig-card{background:var(--bp);border-radius:16px;border:1px solid var(--bl);overflow:hidden;display:none;flex-shrink:0}
 .sig-card.show{display:block}
-.sig-header{
-  padding:13px 16px;border-bottom:1px solid var(--border-light);
-  display:flex;align-items:center;justify-content:space-between;
-}
-.sig-title{font-size:14px;font-weight:600}
-.sig-clear-btn{
-  font-size:12px;color:var(--accent-red);cursor:pointer;
-  background:none;border:none;font-family:inherit;padding:4px 8px;
-}
-.sig-canvas{
-  display:block;width:100%;height:160px;touch-action:none;cursor:crosshair;
-}
-.sig-hint{padding:8px 16px 12px;font-size:11px;color:var(--text-hint)}
+.sig-hdr{padding:12px 16px;border-bottom:1px solid var(--bl);display:flex;align-items:center;justify-content:space-between}
+.sig-title{font-size:13px;font-weight:600}
+.sig-clear{font-size:12px;color:var(--red);cursor:pointer;background:none;border:none;font-family:inherit;padding:4px 8px}
+.sig-canvas{display:block;width:100%;height:160px;touch-action:none;cursor:crosshair}
+.sig-hint{padding:7px 16px 11px;font-size:11px;color:var(--th)}
 
-/* ==================== SUBMIT BUTTON ==================== */
-.submit-btn{
-  display:none;border:none;border-radius:var(--radius-md);padding:17px;
-  font-size:16px;font-weight:700;cursor:pointer;width:100%;
-  font-family:inherit;transition:transform 0.12s,opacity 0.12s;flex-shrink:0;
-  letter-spacing:0.02em;
-}
+/* SUBMIT */
+.submit-btn{display:none;border:none;border-radius:14px;padding:16px;font-size:16px;font-weight:700;cursor:pointer;width:100%;font-family:inherit;transition:transform 0.12s,opacity 0.12s;flex-shrink:0;letter-spacing:0.02em}
 .submit-btn.show{display:block}
 .submit-btn:active{transform:scale(0.975);opacity:0.9}
-.submit-btn.dark{background:#1a1a1a;color:#fff}
-.submit-btn.green{background:var(--accent-green);color:#fff}
+.submit-btn:disabled{opacity:0.5}
+.sb-dark{background:#1a1a1a;color:#fff}
+.sb-green{background:var(--green);color:#fff}
+.sb-blue{background:var(--blue);color:#fff}
 
-/* ==================== SUCCESS ==================== */
-.success-screen{
-  display:none;flex-direction:column;align-items:center;
-  justify-content:center;flex:1;gap:18px;text-align:center;padding:32px;
-}
-.success-screen.show{display:flex}
-.success-icon{font-size:64px;line-height:1}
-.success-title{font-size:22px;font-weight:700}
-.success-msg{font-size:14px;color:var(--text-secondary);line-height:1.7;white-space:pre-line}
-.success-back-btn{
-  padding:15px 36px;border-radius:var(--radius-md);
-  border:1px solid var(--border-mid);background:var(--bg-primary);
-  font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;
-  color:var(--text-primary);margin-top:8px;
-}
+/* SUCCESS */
+.success-scr{display:none;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:16px;text-align:center;padding:32px}
+.success-scr.show{display:flex}
+.suc-icon{font-size:60px;line-height:1}
+.suc-title{font-size:21px;font-weight:700}
+.suc-msg{font-size:14px;color:var(--ts);line-height:1.7;white-space:pre-line}
+.suc-back{padding:14px 32px;border-radius:13px;border:1px solid var(--bm);background:var(--bp);font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--tp);margin-top:8px}
 
-/* ==================== INVENTORY ==================== */
-.inv-search{position:relative}
-.inv-search input{padding-left:38px;font-size:14px}
-.inv-search-icon{
-  position:absolute;left:12px;top:50%;transform:translateY(-50%);
-  font-size:16px;color:var(--text-secondary);pointer-events:none;
-}
-.inv-tabs{
-  display:flex;gap:6px;background:var(--bg-primary);
-  border-radius:var(--radius-sm);padding:4px;border:1px solid var(--border-light);
-  flex-shrink:0;
-}
-.inv-tab{
-  flex:1;padding:9px;border:none;background:transparent;border-radius:7px;
-  font-size:13px;cursor:pointer;font-family:inherit;
-  color:var(--text-secondary);transition:all 0.15s;font-weight:500;
-}
-.inv-tab.active{
-  background:var(--bg-secondary);color:var(--text-primary);
-  font-weight:700;
-}
+/* INVENTORY */
+.inv-tabs{display:flex;gap:6px;background:var(--bp);border-radius:11px;padding:4px;border:1px solid var(--bl);flex-shrink:0}
+.inv-tab{flex:1;padding:9px;border:none;background:transparent;border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;color:var(--ts);transition:all 0.15s;font-weight:500}
+.inv-tab.active{background:var(--bs);color:var(--tp);font-weight:700}
+.filter-scroll{display:flex;gap:6px;overflow-x:auto;padding:2px 0;flex-shrink:0;-webkit-overflow-scrolling:touch}
+.filter-scroll::-webkit-scrollbar{display:none}
+.filter-chip{padding:6px 12px;border-radius:20px;border:1px solid var(--bl);background:var(--bp);cursor:pointer;font-size:12px;font-weight:500;color:var(--ts);white-space:nowrap;transition:all 0.15s;font-family:inherit;flex-shrink:0}
+.filter-chip.active{background:var(--tp);color:var(--bp);border-color:var(--tp)}
 .inv-list{display:flex;flex-direction:column;gap:8px}
-
-.inv-item{
-  background:var(--bg-primary);border-radius:var(--radius-md);
-  border:1px solid var(--border-light);padding:14px 16px;
-  display:flex;align-items:center;gap:12px;cursor:pointer;
-  transition:border-color 0.12s,transform 0.1s;
-}
-.inv-item:active{transform:scale(0.99);border-color:var(--border-mid)}
-.inv-item-icon{
-  width:40px;height:40px;border-radius:11px;background:var(--bg-secondary);
-  display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;
-}
-.inv-item-info{flex:1;min-width:0}
-.inv-item-id{font-size:13px;font-weight:700;font-family:ui-monospace,monospace}
-.inv-item-sub{font-size:12px;color:var(--text-secondary);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.inv-item{background:var(--bp);border-radius:13px;border:1px solid var(--bl);padding:13px 15px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:border-color 0.12s,transform 0.1s}
+.inv-item:active{transform:scale(0.99);border-color:var(--bm)}
+.inv-ico{width:38px;height:38px;border-radius:10px;background:var(--bs);display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0}
+.inv-info{flex:1;min-width:0}
+.inv-id{font-size:13px;font-weight:700;font-family:monospace}
+.inv-sub{font-size:12px;color:var(--ts);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .inv-chip{font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;flex-shrink:0}
-.inv-chip.in{background:var(--accent-green-light);color:#0F6E56}
-.inv-chip.out{background:var(--accent-red-light);color:#993C1D}
+.inv-chip.in{background:var(--green-l);color:var(--green)}
+.inv-chip.out{background:var(--red-l);color:var(--red)}
+.inv-chip.res{background:var(--blue-l);color:var(--blue)}
+.empty-state{padding:48px 24px;text-align:center;color:var(--ts);font-size:14px;display:flex;flex-direction:column;align-items:center;gap:10px}
+.empty-icon{font-size:38px}
 
-/* ==================== MODAL ==================== */
-.modal-overlay{
-  position:absolute;inset:0;background:rgba(0,0,0,0.5);
-  display:none;align-items:flex-end;z-index:200;backdrop-filter:blur(2px);
-}
+/* MODAL */
+.modal-overlay{position:absolute;inset:0;background:rgba(0,0,0,0.5);display:none;align-items:flex-end;z-index:200;backdrop-filter:blur(2px)}
 .modal-overlay.show{display:flex}
-.modal-sheet{
-  background:var(--bg-primary);border-radius:var(--radius-xl) var(--radius-xl) 0 0;
-  width:100%;padding:20px;max-height:80vh;overflow-y:auto;
-  padding-bottom:calc(env(safe-area-inset-bottom,0px) + 20px);
-}
-.modal-handle{
-  width:38px;height:4px;background:var(--border-mid);
-  border-radius:2px;margin:0 auto 18px;
-}
-.modal-item-id{font-size:17px;font-weight:700;font-family:ui-monospace,monospace}
-.modal-item-name{font-size:14px;color:var(--text-secondary);margin-top:4px 0 18px}
-.modal-divider{height:1px;background:var(--border-light);margin:14px 0}
+.modal-sheet{background:var(--bp);border-radius:20px 20px 0 0;width:100%;padding:20px;max-height:85vh;overflow-y:auto;padding-bottom:calc(env(safe-area-inset-bottom,0px)+20px)}
+.modal-handle{width:36px;height:4px;background:var(--bm);border-radius:2px;margin:0 auto 16px}
+.modal-id{font-size:16px;font-weight:700;font-family:monospace}
+.modal-name{font-size:14px;color:var(--ts);margin:4px 0 14px}
 .modal-row{display:flex;justify-content:space-between;align-items:flex-start;padding:10px 0}
-.modal-row+.modal-row{border-top:1px solid var(--border-light)}
-.modal-label{font-size:13px;color:var(--text-secondary)}
-.modal-val{font-size:13px;font-weight:600;text-align:right;max-width:55%;word-break:break-all}
-.modal-close{
-  width:100%;margin-top:18px;padding:14px;border:1px solid var(--border-light);
-  border-radius:var(--radius-md);background:var(--bg-secondary);
-  font-size:15px;cursor:pointer;font-family:inherit;color:var(--text-primary);font-weight:600;
-}
-
-/* ==================== CONFIG NOTICE ==================== */
-.notice-box{
-  background:#FAEEDA;border:1px solid #FAC775;border-radius:var(--radius-md);
-  padding:13px 15px;font-size:12px;color:#633806;line-height:1.7;
-}
-.notice-box strong{display:block;margin-bottom:3px;font-weight:700;font-size:13px}
-.notice-link{color:#854F0B;font-weight:600;text-decoration:underline;cursor:pointer}
-
-/* ==================== EMPTY STATE ==================== */
-.empty-state{
-  padding:48px 24px;text-align:center;color:var(--text-secondary);font-size:14px;
-  display:flex;flex-direction:column;align-items:center;gap:10px;
-}
-.empty-state .empty-icon{font-size:40px}
+.modal-row+.modal-row{border-top:1px solid var(--bl)}
+.modal-label{font-size:13px;color:var(--ts)} .modal-val{font-size:13px;font-weight:600;text-align:right;max-width:55%;word-break:break-all}
+.modal-close{width:100%;margin-top:16px;padding:13px;border:1px solid var(--bl);border-radius:13px;background:var(--bs);font-size:15px;cursor:pointer;font-family:inherit;color:var(--tp);font-weight:600}
+.modal-action{width:100%;margin-top:8px;padding:14px;border:none;border-radius:13px;font-size:15px;cursor:pointer;font-family:inherit;font-weight:700}
+.modal-action.blue{background:var(--blue);color:#fff}
 </style>
 </head>
 <body>
 <div id="app">
 
-  <!-- HEADER -->
-  <div class="header">
-    <div class="header-inner">
-      <div class="logo-mark">
-        <svg viewBox="0 0 18 18"><rect x="1" y="1" width="7" height="7" rx="1.5"/><rect x="10" y="1" width="7" height="7" rx="1.5"/><rect x="1" y="10" width="7" height="7" rx="1.5"/><rect x="10" y="10" width="7" height="7" rx="1.5" fill-opacity="0.35"/></svg>
-      </div>
-      <div>
-        <div class="brand-name">卯時設計有限公司</div>
-        <div class="brand-sub">套量服外借管理系統 v10</div>
-      </div>
+<!-- HEADER -->
+<div class="hdr">
+  <div class="hdr-inner">
+    <div class="logo">
+      <svg viewBox="0 0 18 18"><rect x="1" y="1" width="7" height="7" rx="1.5"/><rect x="10" y="1" width="7" height="7" rx="1.5"/><rect x="1" y="10" width="7" height="7" rx="1.5"/><rect x="10" y="10" width="7" height="7" rx="1.5" fill-opacity="0.35"/></svg>
     </div>
-  </div>
-
-  <!-- ===== HOME ===== -->
-  <div id="page-home" class="page active">
-    <div class="greeting">
-      <h1>您好 👋<br>今天要做什麼？</h1>
-      <p>掃碼即可完成借還，三步搞定</p>
+    <div>
+      <div class="brand-name">卯時設計有限公司</div>
+      <div class="brand-sub">套量服外借管理系統 v11</div>
     </div>
-
-    <div class="stats-row">
-      <div class="stat-card green">
-        <div class="stat-num" id="stat-in">—</div>
-        <div class="stat-label">目前在庫</div>
-      </div>
-      <div class="stat-card orange">
-        <div class="stat-num" id="stat-out">—</div>
-        <div class="stat-label">外借中</div>
-      </div>
-    </div>
-
-    <button class="main-btn btn-borrow" onclick="goPage('borrow')">
-      <div class="btn-icon-area">
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-      </div>
-      <div class="btn-content">
-        <span class="btn-label">外借</span>
-        <span class="btn-desc">掃碼登記借出套量服</span>
-      </div>
-      <span class="btn-arrow">›</span>
+    <button class="refresh-btn" id="refresh-btn" onclick="doRefresh()" title="刷新庫存">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
     </button>
-
-    <button class="main-btn btn-return" onclick="goPage('return')">
-      <div class="btn-icon-area">
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-      </div>
-      <div class="btn-content">
-        <span class="btn-label">歸還</span>
-        <span class="btn-desc">掃碼確認收回套量服</span>
-      </div>
-      <span class="btn-arrow">›</span>
-    </button>
-
-    <button class="main-btn btn-inventory" onclick="goPage('inventory')">
-      <div class="btn-icon-area">
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
-      </div>
-      <div class="btn-content">
-        <span class="btn-label">庫存查詢</span>
-        <span class="btn-desc">查看所有衣服借還狀態</span>
-      </div>
-      <span class="btn-arrow">›</span>
-    </button>
-
-
   </div>
-
-  <!-- ===== BORROW PAGE ===== -->
-  <div id="page-borrow" class="page">
-    <div class="page-hd">
-      <button class="back-btn" onclick="goHome()">‹</button>
-      <span class="page-title">外借登記</span>
-      <span class="page-badge badge-borrow">BORROW</span>
-    </div>
-
-    <div class="scanner-card">
-      <div class="scanner-top">
-        <div class="scanner-icon dark">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><line x1="14" y1="14" x2="21" y2="14"/><line x1="21" y1="14" x2="21" y2="21"/><line x1="14" y1="21" x2="21" y2="21"/></svg>
-        </div>
-        <div>
-          <div class="scanner-label">掃描服裝條碼</div>
-          <div class="scanner-desc">對準吊牌或袋上的 QR Code / 條碼</div>
-        </div>
-      </div>
-      <div class="scan-toggle">
-        <button class="toggle-btn active" id="b-scan-tab" onclick="setBorrowMode('scan')">📷 相機掃描</button>
-        <button class="toggle-btn" id="b-manual-tab" onclick="setBorrowMode('manual')">⌨️ 手動輸入</button>
-      </div>
-      <div id="borrow-reader-wrap">
-        <div id="borrow-reader"></div>
-        <div class="scan-hint">將條碼對準框內，即自動辨識</div>
-      </div>
-      <div class="manual-area" id="b-manual-area">
-        <div class="manual-row">
-          <input type="text" id="b-manual-input" placeholder="輸入服裝 ID，如 MS-POLO-001" style="flex:1">
-          <button onclick="manualBorrow()" style="padding:11px 16px;border:none;border-radius:10px;background:#1a1a1a;color:#fff;font-size:14px;cursor:pointer;font-weight:600;white-space:nowrap;font-family:inherit">確認</button>
-        </div>
-      </div>
-      <div class="scanned-preview" id="b-preview">
-        <div class="preview-inner">
-          <div class="item-icon-box dark">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.38 3.46L16 2a4 4 0 01-8 0L3.62 3.46a2 2 0 00-1.34 2.23l.58 3.57a1 1 0 00.99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 002-2V10h2.15a1 1 0 00.99-.84l.58-3.57a2 2 0 00-1.34-2.23z"/></svg>
-          </div>
-          <div>
-            <div class="preview-id" id="b-item-id">—</div>
-            <div class="preview-meta" id="b-item-meta">—</div>
-          </div>
-          <span class="chip chip-in">在庫中 ✓</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="form-card" id="b-form">
-      <div class="field-group">
-        <label class="field-label">借出業務</label>
-        <select id="b-staff">
-          <option value="">— 請選擇業務 —</option>
-          <option value="YuHsuan">YuHsuan</option>
-          <option value="Minzu">Minzu</option>
-          <option value="CM">CM</option>
-          <option value="CY">CY</option>
-          <option value="MM">MM</option>
-          <option value="WL">WL</option>
-          <option value="YJY">YJY</option>
-        </select>
-      </div>
-      <div class="field-group">
-        <label class="field-label">借給客戶</label>
-        <input type="text" id="b-client" placeholder="客戶公司或姓名">
-      </div>
-      <div class="field-group">
-        <label class="field-label">客戶聯絡電話</label>
-        <input type="tel" id="b-phone" placeholder="例：0912-345-678">
-      </div>
-      <div class="field-group">
-        <label class="field-label">預計歸還日期</label>
-        <input type="date" id="b-due">
-      </div>
-      <div class="field-group">
-        <label class="field-label">備註（選填）</label>
-        <textarea id="b-note" rows="2" placeholder="如有特殊說明請填寫"></textarea>
-      </div>
-    </div>
-
-    <div class="sig-card" id="b-sig-card">
-      <div class="sig-header">
-        <span class="sig-title">✍️ 借用人簽名</span>
-        <button class="sig-clear-btn" onclick="clearSig('b')">清除重簽</button>
-      </div>
-      <canvas class="sig-canvas" id="b-sig" height="200" style="background:#f8f8f6"></canvas>
-      <div class="sig-hint">請在上方空白處手寫簽名確認借出</div>
-    </div>
-
-    <button class="submit-btn dark" id="b-submit" onclick="submitBorrow()">確認外借 →</button>
-
-    <div class="success-screen" id="b-success">
-      <div class="success-icon">✅</div>
-      <div class="success-title">外借登記完成！</div>
-      <div class="success-msg" id="b-success-msg">已記錄外借資訊<br>庫存狀態自動更新</div>
-      <button class="success-back-btn" onclick="resetBorrow()">返回首頁</button>
-    </div>
-  </div>
-
-  <!-- ===== RETURN PAGE ===== -->
-  <div id="page-return" class="page">
-    <div class="page-hd">
-      <button class="back-btn" onclick="goHome()">‹</button>
-      <span class="page-title">歸還確認</span>
-      <span class="page-badge badge-return">RETURN</span>
-    </div>
-
-    <div class="scanner-card">
-      <div class="scanner-top">
-        <div class="scanner-icon green">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><line x1="14" y1="14" x2="21" y2="14"/><line x1="21" y1="14" x2="21" y2="21"/><line x1="14" y1="21" x2="21" y2="21"/></svg>
-        </div>
-        <div>
-          <div class="scanner-label">掃描服裝條碼</div>
-          <div class="scanner-desc">確認要歸還的套量服</div>
-        </div>
-      </div>
-      <div class="scan-toggle">
-        <button class="toggle-btn active" id="r-scan-tab" onclick="setReturnMode('scan')">📷 相機掃描</button>
-        <button class="toggle-btn" id="r-manual-tab" onclick="setReturnMode('manual')">⌨️ 手動輸入</button>
-      </div>
-      <div id="return-reader-wrap">
-        <div id="return-reader"></div>
-        <div class="scan-hint">將條碼對準框內，即自動辨識</div>
-      </div>
-      <div class="manual-area" id="r-manual-area">
-        <div class="manual-row">
-          <input type="text" id="r-manual-input" placeholder="輸入服裝 ID，如 MS-POLO-001" style="flex:1">
-          <button onclick="manualReturn()" style="padding:11px 16px;border:none;border-radius:10px;background:#0F6E56;color:#fff;font-size:14px;cursor:pointer;font-weight:600;white-space:nowrap;font-family:inherit">確認</button>
-        </div>
-      </div>
-      <div class="scanned-preview" id="r-preview">
-        <div class="preview-inner">
-          <div class="item-icon-box green">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.38 3.46L16 2a4 4 0 01-8 0L3.62 3.46a2 2 0 00-1.34 2.23l.58 3.57a1 1 0 00.99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 002-2V10h2.15a1 1 0 00.99-.84l.58-3.57a2 2 0 00-1.34-2.23z"/></svg>
-          </div>
-          <div>
-            <div class="preview-id" id="r-item-id">—</div>
-            <div class="preview-meta" id="r-item-meta">—</div>
-          </div>
-          <span class="chip chip-out">外借中</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="form-card" id="r-form">
-      <div class="info-box">
-        <div class="info-box-title">借出資訊確認</div>
-        <div class="info-row"><span class="info-row-label">借出業務</span><span class="info-row-val" id="r-staff-val">—</span></div>
-        <div class="info-row"><span class="info-row-label">借出客戶</span><span class="info-row-val" id="r-client-val">—</span></div>
-        <div class="info-row"><span class="info-row-label">借出日期</span><span class="info-row-val" id="r-bdate-val">—</span></div>
-        <div class="info-row"><span class="info-row-label">預計歸還</span><span class="info-row-val" id="r-ddate-val">—</span></div>
-      </div>
-      <div class="field-group">
-        <label class="field-label">衣服狀態</label>
-        <select id="r-condition">
-          <option value="良好">衣服狀態良好</option>
-          <option value="有輕微污損">有輕微污損</option>
-          <option value="需要清洗">需要清洗</option>
-          <option value="有損壞">有損壞，需維修</option>
-        </select>
-      </div>
-      <div class="field-group">
-        <label class="field-label">備註（選填）</label>
-        <textarea id="r-note" rows="2" placeholder="如有異常請填寫"></textarea>
-      </div>
-    </div>
-
-    <div class="sig-card" id="r-sig-card">
-      <div class="sig-header">
-        <span class="sig-title">✍️ 收件人簽名確認</span>
-        <button class="sig-clear-btn" onclick="clearSig('r')">清除重簽</button>
-      </div>
-      <canvas class="sig-canvas" id="r-sig" height="200" style="background:#f0faf6"></canvas>
-      <div class="sig-hint">請在上方空白處手寫簽名確認已收回</div>
-    </div>
-
-    <button class="submit-btn green" id="r-submit" onclick="submitReturn()">確認歸還 →</button>
-
-    <div class="success-screen" id="r-success">
-      <div class="success-icon">📦</div>
-      <div class="success-title">歸還登記完成！</div>
-      <div class="success-msg" id="r-success-msg">衣服已確認收回<br>庫存狀態自動更新</div>
-      <button class="success-back-btn" onclick="resetReturn()">返回首頁</button>
-    </div>
-  </div>
-
-  <!-- ===== INVENTORY PAGE ===== -->
-  <div id="page-inventory" class="page">
-    <div class="page-hd">
-      <button class="back-btn" onclick="goHome()">‹</button>
-      <span class="page-title">庫存查詢</span>
-    </div>
-
-    <div class="inv-search">
-      <span class="inv-search-icon">🔍</span>
-      <input type="text" id="inv-q" placeholder="搜尋 ID、品項或客戶名稱" oninput="renderInv()">
-    </div>
-
-    <div class="inv-tabs">
-      <button class="inv-tab active" onclick="setInvTab('all',this)">全部</button>
-      <button class="inv-tab" onclick="setInvTab('in',this)">在庫中</button>
-      <button class="inv-tab" onclick="setInvTab('out',this)">外借中</button>
-    </div>
-
-    <div id="inv-list" class="inv-list"></div>
-  </div>
-
-  <!-- MODAL -->
-  <div class="modal-overlay" id="modal" onclick="closeModal()">
-    <div class="modal-sheet" onclick="event.stopPropagation()">
-      <div class="modal-handle"></div>
-      <div class="modal-item-id" id="m-id">—</div>
-      <div class="modal-item-name" id="m-name" style="color:var(--text-secondary);margin:4px 0 16px"></div>
-      <div id="m-rows"></div>
-      <button class="modal-close" onclick="closeModal()">關閉</button>
-    </div>
-  </div>
-
+  <div class="last-update" id="last-update">尚未更新</div>
 </div>
 
+<!-- ===== HOME ===== -->
+<div id="page-home" class="page active">
+  <div class="greeting">
+    <h1>您好 👋<br>今天要做什麼？</h1>
+    <p>掃碼即可完成借還，三步搞定</p>
+  </div>
+
+  <div class="dash-grid">
+    <div class="dash-card green" onclick="jumpInv('in','TSH-CT20-B')">
+      <div class="d-dot"></div>
+      <div class="d-num" id="d-bversion">—</div>
+      <div class="d-label">B版在庫</div>
+    </div>
+    <div class="dash-card green" onclick="jumpInv('in','TSH-CT20-C')">
+      <div class="d-dot"></div>
+      <div class="d-num" id="d-cversion">—</div>
+      <div class="d-label">C版在庫</div>
+    </div>
+    <div class="dash-card green" onclick="jumpInv('in','HDT')">
+      <div class="d-dot"></div>
+      <div class="d-num" id="d-hdt">—</div>
+      <div class="d-label">帽T在庫</div>
+    </div>
+    <div class="dash-card blue" onclick="jumpInv('res','')">
+      <div class="d-dot"></div>
+      <div class="d-num" id="d-res">—</div>
+      <div class="d-label">預約中</div>
+    </div>
+    <div class="dash-card red" onclick="jumpInv('out','')">
+      <div class="d-dot"></div>
+      <div class="d-num" id="d-out">—</div>
+      <div class="d-label">外借中</div>
+    </div>
+  </div>
+
+  <div class="main-btns">
+    <button class="main-btn btn-borrow" onclick="goPage('borrow')">
+      <div class="btn-ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></div>
+      <div class="btn-txt"><span class="btn-lbl">外借</span><span class="btn-desc">掃碼登記借出套量服</span></div>
+      <span class="btn-arr">›</span>
+    </button>
+    <button class="main-btn btn-return" onclick="goPage('return')">
+      <div class="btn-ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></div>
+      <div class="btn-txt"><span class="btn-lbl">歸還</span><span class="btn-desc">掃碼確認收回套量服</span></div>
+      <span class="btn-arr">›</span>
+    </button>
+    <button class="main-btn btn-reserve" onclick="goPage('reserve')">
+      <div class="btn-ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+      <div class="btn-txt"><span class="btn-lbl">預約</span><span class="btn-desc">登記預約套量服</span></div>
+      <span class="btn-arr">›</span>
+    </button>
+    <button class="main-btn btn-inventory" onclick="goPage('inventory')">
+      <div class="btn-ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg></div>
+      <div class="btn-txt"><span class="btn-lbl">庫存查詢</span><span class="btn-desc">查看所有衣服借還狀態</span></div>
+      <span class="btn-arr">›</span>
+    </button>
+  </div>
+</div>
+
+<!-- ===== BORROW PAGE ===== -->
+<div id="page-borrow" class="page">
+  <div class="pg-hd">
+    <button class="back-btn" onclick="goHome()">‹</button>
+    <span class="pg-title">外借登記</span>
+    <span class="pg-badge badge-borrow">BORROW</span>
+  </div>
+  <div class="scan-card" id="b-scan-card">
+    <div class="scan-top">
+      <div class="scan-ico dark"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><line x1="14" y1="14" x2="21" y2="14"/><line x1="21" y1="14" x2="21" y2="21"/><line x1="14" y1="21" x2="21" y2="21"/></svg></div>
+      <div><div class="scan-lbl">掃描服裝條碼</div><div class="scan-desc">對準吊牌或袋上的 QR Code</div></div>
+    </div>
+    <div class="scan-toggle">
+      <button class="tog-btn active" id="b-scan-tab" onclick="setBorrowMode('scan')">📷 相機掃描</button>
+      <button class="tog-btn" id="b-manual-tab" onclick="setBorrowMode('manual')">☰ 手動選擇</button>
+    </div>
+    <div class="reader-wrap" id="b-reader-wrap"><div id="b-reader"></div><div class="scan-hint">將條碼對準框內即自動辨識</div></div>
+    <div class="manual-area" id="b-manual-area">
+      <div class="step-row">
+        <div class="step-label">選擇版型</div>
+        <div class="type-grid" id="b-type-grid"></div>
+        <div id="b-num-section" style="display:none">
+          <div class="step-label" style="margin-top:8px">選擇編號</div>
+          <div class="num-grid" id="b-num-grid"></div>
+        </div>
+        <button class="confirm-manual-btn" id="b-confirm-manual" onclick="confirmBorrowManual()">確認選擇</button>
+      </div>
+    </div>
+    <div class="scanned-prev" id="b-preview">
+      <div class="prev-inner">
+        <div class="prev-ico dark"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.38 3.46L16 2a4 4 0 01-8 0L3.62 3.46a2 2 0 00-1.34 2.23l.58 3.57a1 1 0 00.99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 002-2V10h2.15a1 1 0 00.99-.84l.58-3.57a2 2 0 00-1.34-2.23z"/></svg></div>
+        <div><div class="prev-id" id="b-item-id">—</div><div class="prev-meta" id="b-item-meta">—</div></div>
+        <span class="chip chip-in">在庫中 ✓</span>
+      </div>
+    </div>
+  </div>
+  <div class="form-card" id="b-form">
+    <div class="field-grp"><label class="field-lbl">借出業務</label>
+      <select id="b-staff"><option value="">— 請選擇業務 —</option><option>YuHsuan</option><option>Minzu</option><option>CM</option><option>CY</option><option>MM</option><option>WL</option><option>YJY</option></select>
+    </div>
+    <div class="field-grp"><label class="field-lbl">借給客戶</label><input type="text" id="b-client" placeholder="客戶公司或姓名"></div>
+    <div class="field-grp"><label class="field-lbl">客戶聯絡電話</label><input type="tel" id="b-phone" placeholder="例：0912-345-678"></div>
+    <div class="field-grp"><label class="field-lbl">預計歸還日期</label><input type="date" id="b-due"></div>
+    <div class="field-grp"><label class="field-lbl">備註（選填）</label><textarea id="b-note" rows="2" placeholder="如有特殊說明請填寫"></textarea></div>
+  </div>
+  <div class="sig-card" id="b-sig-card">
+    <div class="sig-hdr"><span class="sig-title">✍️ 借用人簽名</span><button class="sig-clear" onclick="clearSig('b-sig')">清除重簽</button></div>
+    <canvas class="sig-canvas" id="b-sig" height="200" style="background:#f8f8f6"></canvas>
+    <div class="sig-hint">請在上方空白處手寫簽名確認借出</div>
+  </div>
+  <button class="submit-btn sb-dark" id="b-submit" onclick="submitBorrow()">確認外借 →</button>
+  <div class="success-scr" id="b-success">
+    <div class="suc-icon">✅</div>
+    <div class="suc-title">外借登記完成！</div>
+    <div class="suc-msg" id="b-success-msg"></div>
+    <button class="suc-back" onclick="resetBorrow()">返回首頁</button>
+  </div>
+</div>
+
+<!-- ===== RETURN PAGE ===== -->
+<div id="page-return" class="page">
+  <div class="pg-hd">
+    <button class="back-btn" onclick="goHome()">‹</button>
+    <span class="pg-title">歸還確認</span>
+    <span class="pg-badge badge-return">RETURN</span>
+  </div>
+  <div class="scan-card" id="r-scan-card">
+    <div class="scan-top">
+      <div class="scan-ico green"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><line x1="14" y1="14" x2="21" y2="14"/><line x1="21" y1="14" x2="21" y2="21"/><line x1="14" y1="21" x2="21" y2="21"/></svg></div>
+      <div><div class="scan-lbl">掃描服裝條碼</div><div class="scan-desc">確認要歸還的套量服</div></div>
+    </div>
+    <div class="scan-toggle">
+      <button class="tog-btn active" id="r-scan-tab" onclick="setReturnMode('scan')">📷 相機掃描</button>
+      <button class="tog-btn" id="r-manual-tab" onclick="setReturnMode('manual')">☰ 手動選擇</button>
+    </div>
+    <div class="reader-wrap" id="r-reader-wrap"><div id="r-reader"></div><div class="scan-hint">將條碼對準框內即自動辨識</div></div>
+    <div class="manual-area" id="r-manual-area">
+      <div class="step-row">
+        <div class="step-label">選擇版型</div>
+        <div class="type-grid" id="r-type-grid"></div>
+        <div id="r-num-section" style="display:none">
+          <div class="step-label" style="margin-top:8px">選擇編號</div>
+          <div class="num-grid" id="r-num-grid"></div>
+        </div>
+        <button class="confirm-manual-btn" id="r-confirm-manual" onclick="confirmReturnManual()">確認選擇</button>
+      </div>
+    </div>
+    <div class="scanned-prev" id="r-preview">
+      <div class="prev-inner">
+        <div class="prev-ico green"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.38 3.46L16 2a4 4 0 01-8 0L3.62 3.46a2 2 0 00-1.34 2.23l.58 3.57a1 1 0 00.99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 002-2V10h2.15a1 1 0 00.99-.84l.58-3.57a2 2 0 00-1.34-2.23z"/></svg></div>
+        <div><div class="prev-id" id="r-item-id">—</div><div class="prev-meta" id="r-item-meta">—</div></div>
+        <span class="chip chip-out">外借中</span>
+      </div>
+    </div>
+  </div>
+  <div class="form-card" id="r-form">
+    <div class="info-box">
+      <div class="info-box-title">借出資訊確認</div>
+      <div class="info-row"><span class="info-lbl">借出業務</span><span class="info-val" id="r-staff-val">—</span></div>
+      <div class="info-row"><span class="info-lbl">借出客戶</span><span class="info-val" id="r-client-val">—</span></div>
+      <div class="info-row"><span class="info-lbl">借出日期</span><span class="info-val" id="r-bdate-val">—</span></div>
+      <div class="info-row"><span class="info-lbl">預計歸還</span><span class="info-val" id="r-ddate-val">—</span></div>
+    </div>
+    <div class="field-grp"><label class="field-lbl">經手業務（接回人）</label>
+      <select id="r-handler"><option value="">— 請選擇 —</option><option>YuHsuan</option><option>Minzu</option><option>CM</option><option>CY</option><option>MM</option><option>WL</option><option>YJY</option></select>
+    </div>
+    <div class="field-grp"><label class="field-lbl">衣服狀態</label>
+      <select id="r-condition"><option value="良好">衣服狀態良好</option><option value="有輕微污損">有輕微污損</option><option value="需要清洗">需要清洗</option><option value="有損壞">有損壞，需維修</option></select>
+    </div>
+    <div class="field-grp"><label class="field-lbl">備註（選填）</label><textarea id="r-note" rows="2" placeholder="如有異常請填寫"></textarea></div>
+  </div>
+  <div class="sig-card" id="r-sig-card">
+    <div class="sig-hdr"><span class="sig-title">✍️ 收件人簽名確認</span><button class="sig-clear" onclick="clearSig('r-sig')">清除重簽</button></div>
+    <canvas class="sig-canvas" id="r-sig" height="200" style="background:#f0faf6"></canvas>
+    <div class="sig-hint">請在上方空白處手寫簽名確認已收回</div>
+  </div>
+  <button class="submit-btn sb-green" id="r-submit" onclick="submitReturn()">確認歸還 →</button>
+  <div class="success-scr" id="r-success">
+    <div class="suc-icon">📦</div>
+    <div class="suc-title">歸還登記完成！</div>
+    <div class="suc-msg" id="r-success-msg"></div>
+    <button class="suc-back" onclick="resetReturn()">返回首頁</button>
+  </div>
+</div>
+
+<!-- ===== RESERVE PAGE ===== -->
+<div id="page-reserve" class="page">
+  <div class="pg-hd">
+    <button class="back-btn" onclick="goHome()">‹</button>
+    <span class="pg-title">預約登記</span>
+    <span class="pg-badge badge-reserve">RESERVE</span>
+  </div>
+  <div class="scan-card" id="res-scan-card">
+    <div class="scan-top">
+      <div class="scan-ico blue"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+      <div><div class="scan-lbl">選擇套量服</div><div class="scan-desc">掃描或手動選擇要預約的衣服</div></div>
+    </div>
+    <div class="scan-toggle">
+      <button class="tog-btn active" id="res-scan-tab" onclick="setReserveMode('scan')">📷 相機掃描</button>
+      <button class="tog-btn" id="res-manual-tab" onclick="setReserveMode('manual')">☰ 手動選擇</button>
+    </div>
+    <div class="reader-wrap" id="res-reader-wrap"><div id="res-reader"></div><div class="scan-hint">將條碼對準框內即自動辨識</div></div>
+    <div class="manual-area" id="res-manual-area">
+      <div class="step-row">
+        <div class="step-label">選擇版型</div>
+        <div class="type-grid" id="res-type-grid"></div>
+        <div id="res-num-section" style="display:none">
+          <div class="step-label" style="margin-top:8px">選擇編號</div>
+          <div class="num-grid" id="res-num-grid"></div>
+        </div>
+        <button class="confirm-manual-btn" id="res-confirm-manual" onclick="confirmReserveManual()">確認選擇</button>
+      </div>
+    </div>
+    <div class="scanned-prev" id="res-preview">
+      <div class="prev-inner">
+        <div class="prev-ico blue"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.38 3.46L16 2a4 4 0 01-8 0L3.62 3.46a2 2 0 00-1.34 2.23l.58 3.57a1 1 0 00.99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 002-2V10h2.15a1 1 0 00.99-.84l.58-3.57a2 2 0 00-1.34-2.23z"/></svg></div>
+        <div><div class="prev-id" id="res-item-id">—</div><div class="prev-meta" id="res-item-meta">—</div></div>
+        <span class="chip chip-in">在庫中 ✓</span>
+      </div>
+    </div>
+  </div>
+  <div class="form-card" id="res-form">
+    <div class="field-grp"><label class="field-lbl">負責業務</label>
+      <select id="res-staff"><option value="">— 請選擇業務 —</option><option>YuHsuan</option><option>Minzu</option><option>CM</option><option>CY</option><option>MM</option><option>WL</option><option>YJY</option></select>
+    </div>
+    <div class="field-grp"><label class="field-lbl">預約客戶</label><input type="text" id="res-client" placeholder="客戶公司或姓名"></div>
+    <div class="field-grp"><label class="field-lbl">客戶聯絡電話</label><input type="tel" id="res-phone" placeholder="例：0912-345-678"></div>
+    <div class="field-grp"><label class="field-lbl">預計借出日期</label><input type="date" id="res-borrow-date"></div>
+    <div class="field-grp"><label class="field-lbl">預計歸還日期</label><input type="date" id="res-due"></div>
+    <div class="field-grp"><label class="field-lbl">備註（選填）</label><textarea id="res-note" rows="2" placeholder="如有特殊說明請填寫"></textarea></div>
+  </div>
+  <button class="submit-btn sb-blue" id="res-submit" onclick="submitReserve()">確認預約 →</button>
+  <div class="success-scr" id="res-success">
+    <div class="suc-icon">📅</div>
+    <div class="suc-title">預約登記完成！</div>
+    <div class="suc-msg" id="res-success-msg"></div>
+    <button class="suc-back" onclick="resetReserve()">返回首頁</button>
+  </div>
+</div>
+
+<!-- ===== INVENTORY PAGE ===== -->
+<div id="page-inventory" class="page">
+  <div class="pg-hd">
+    <button class="back-btn" onclick="goHome()">‹</button>
+    <span class="pg-title">庫存查詢</span>
+  </div>
+  <div class="inv-tabs">
+    <button class="inv-tab active" id="inv-tab-in"  onclick="setInvTab('in',this)">在庫中</button>
+    <button class="inv-tab" id="inv-tab-res" onclick="setInvTab('res',this)">預約中</button>
+    <button class="inv-tab" id="inv-tab-out" onclick="setInvTab('out',this)">外借中</button>
+  </div>
+  <div class="filter-scroll" id="inv-filters"></div>
+  <div id="inv-list" class="inv-list"></div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal" onclick="closeModal()">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-id" id="m-id">—</div>
+    <div class="modal-name" id="m-name">—</div>
+    <div id="m-rows"></div>
+    <button class="modal-action blue" id="m-action-btn" style="display:none" onclick="modalToBorrow()">📋 正式外借</button>
+    <button class="modal-close" onclick="closeModal()">關閉</button>
+  </div>
+</div>
+
+</div>
 <script>
-// ===================== CONFIG =====================
-// ⚠️ 填入您的 Google Apps Script 部署網址（部署後取得）
+// ==================== CONFIG ====================
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbxFjRU0iMA-XmUFUxp2q8-W1-iQd6XF6HpMCeENCbGRnzO_6w2nPpsctWNWxH1k0Y7y3w/exec';
 
-// ===================== DEMO DATA =====================
+// ==================== ITEM TYPES ====================
+const TYPES = [
+  {key:'TSH-CT20-B', label:'T-Shirt C+T20 B版', count:20},
+  {key:'TSH-CT20-C', label:'T-Shirt C+T20 C版', count:20},
+  {key:'TSH-C16-C',  label:'T-Shirt C16 C版',   count:2},
+  {key:'TSH-C16-D',  label:'T-Shirt C16 D版',   count:1},
+  {key:'TSH-WS',     label:'T-Shirt 水洗',       count:3},
+  {key:'JKT-500',    label:'落肩外套 500g',       count:6},
+  {key:'JKT-580',    label:'落肩外套 580g',       count:2},
+  {key:'HDT-500',    label:'落肩帽T 500g',        count:5},
+  {key:'HDT-580',    label:'落肩帽T 580g',        count:2},
+  {key:'UNT-500',    label:'落肩大學T 500g',      count:4},
+  {key:'UNT-580',    label:'落肩大學T 580g',      count:2},
+];
+
+const INV_FILTERS = [
+  {key:'',          label:'全部'},
+  {key:'TSH-CT20-B',label:'B版'},
+  {key:'TSH-CT20-C',label:'C版'},
+  {key:'TSH-C16',   label:'C16'},
+  {key:'TSH-WS',    label:'水洗'},
+  {key:'JKT-500',   label:'外套500g'},
+  {key:'JKT-580',   label:'外套580g'},
+  {key:'HDT-500',   label:'帽T 500g'},
+  {key:'HDT-580',   label:'帽T 580g'},
+  {key:'UNT-500',   label:'大學T 500g'},
+  {key:'UNT-580',   label:'大學T 580g'},
+];
+
+// ==================== STATE ====================
 let inventory = [];
+let invTabFilter = 'in';
+let invTypeFilter = '';
+let scannedBId = null, scannedRId = null, scannedResId = null;
+let borrowScanner = null, returnScanner = null, reserveScanner = null;
+let selectedBType = '', selectedBNum = '';
+let selectedRType = '', selectedRNum = '';
+let selectedResType = '', selectedResNum = '';
+let modalCurrentId = null;
+let pendingReserveData = null; // 預約轉外借用
 
-
-// ===================== STATE =====================
-let scannedBId = null, scannedRId = null;
-let borrowScanner = null, returnScanner = null;
-let invTabFilter = 'all';
-
-// ===================== NAVIGATION =====================
+// ==================== NAVIGATION ====================
 function goPage(p) {
+  stopAll();
   document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
   document.getElementById('page-'+p).classList.add('active');
-  if(p==='borrow') initBorrow();
-  if(p==='return') initReturn();
+  if(p==='borrow')    initBorrow();
+  if(p==='return')    initReturn();
+  if(p==='reserve')   initReserve();
   if(p==='inventory') initInventory();
 }
 
@@ -694,275 +550,461 @@ function goHome() {
   stopAll();
   document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
   document.getElementById('page-home').classList.add('active');
-  refreshStats();
 }
 
-function refreshStats() {
-  document.getElementById('stat-in').textContent = inventory.filter(i=>i.status==='in').length;
-  document.getElementById('stat-out').textContent = inventory.filter(i=>i.status==='out').length;
+function jumpInv(tab, filter) {
+  invTabFilter = tab;
+  invTypeFilter = filter;
+  goPage('inventory');
 }
 
-// ===================== SCANNER =====================
+// ==================== REFRESH ====================
+async function doRefresh() {
+  const btn = document.getElementById('refresh-btn');
+  btn.classList.add('spinning');
+  await loadInventory();
+  setTimeout(()=>btn.classList.remove('spinning'), 600);
+}
+
+async function loadInventory() {
+  const r = await callAPIAsync({action:'getInventory'});
+  if(r && r.items){ inventory = r.items; }
+  updateDashboard();
+  const now = new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('last-update').textContent = '上次更新：'+now;
+}
+
+function updateDashboard() {
+  const bv  = inventory.filter(i=>i.status==='in'  && i.id.startsWith('TSH-CT20-B')).length;
+  const cv  = inventory.filter(i=>i.status==='in'  && i.id.startsWith('TSH-CT20-C')).length;
+  const hdt = inventory.filter(i=>i.status==='in'  && i.id.startsWith('HDT')).length;
+  const res = inventory.filter(i=>i.status==='res').length;
+  const out = inventory.filter(i=>i.status==='out').length;
+  document.getElementById('d-bversion').textContent = bv;
+  document.getElementById('d-cversion').textContent = cv;
+  document.getElementById('d-hdt').textContent = hdt;
+  document.getElementById('d-res').textContent = res;
+  document.getElementById('d-out').textContent = out;
+}
+
+// ==================== SCANNER ====================
 function stopAll() {
-  if(borrowScanner){try{borrowScanner.stop();}catch(e){} borrowScanner=null;}
-  if(returnScanner){try{returnScanner.stop();}catch(e){} returnScanner=null;}
+  if(borrowScanner) { try{borrowScanner.stop();}catch(e){} borrowScanner=null; }
+  if(returnScanner) { try{returnScanner.stop();}catch(e){} returnScanner=null; }
+  if(reserveScanner){ try{reserveScanner.stop();}catch(e){} reserveScanner=null; }
 }
 
 function startScanner(divId, onResult) {
   const s = new Html5Qrcode(divId);
-  const videoConstraints = {
-    facingMode: 'environment',
-    width: { ideal: 1280 },
-    height: { ideal: 720 }
-  };
-  s.start(
-    videoConstraints,
-    { fps:15, qrbox:function(w,h){const m=Math.min(w,h)*0.7;return{width:m,height:m};}, aspectRatio:1.0, videoConstraints },
-    text=>{ onResult(text.trim()); s.stop(); },
-    ()=>{}
+  const vc = { facingMode:'environment', width:{ideal:1280}, height:{ideal:720} };
+  s.start(vc,
+    {fps:15, qrbox:function(w,h){const m=Math.min(w,h)*0.7;return{width:m,height:m};}, aspectRatio:1.0, videoConstraints:vc},
+    text=>{ onResult(text.trim()); s.stop(); }, ()=>{}
   ).catch(()=>{
-    document.getElementById(divId).innerHTML = '<div class="no-cam-msg">⚠️ 無法存取相機<br>請切換至「手動輸入」模式<br><small>（需在 https:// 網域或本機使用）</small></div>';
+    document.getElementById(divId).innerHTML='<div class="no-cam">⚠️ 無法存取相機<br>請切換至「手動選擇」模式</div>';
   });
   return s;
 }
 
-// ===================== BORROW =====================
+function hideScanCard(prefix) {
+  document.getElementById(prefix+'-reader-wrap').style.display='none';
+  document.querySelector('#page-'+prefix.replace('res','reserve').replace('b','borrow').replace('r','return')+' .scan-top').style.display='none';
+  document.querySelector('#page-'+prefix.replace('res','reserve').replace('b','borrow').replace('r','return')+' .scan-toggle').style.display='none';
+}
+
+// ==================== TYPE/NUM GRID ====================
+function buildTypeGrid(gridId, numSectionId, numGridId, confirmBtnId, filterFn, onSelect) {
+  const grid = document.getElementById(gridId);
+  grid.innerHTML = '';
+  TYPES.forEach(t=>{
+    const btn = document.createElement('button');
+    btn.className = 'type-btn';
+    btn.textContent = t.label;
+    btn.onclick = () => {
+      grid.querySelectorAll('.type-btn').forEach(b=>b.classList.remove('selected'));
+      btn.classList.add('selected');
+      buildNumGrid(numGridId, confirmBtnId, t.key, t.count, filterFn);
+      document.getElementById(numSectionId).style.display='block';
+      document.getElementById(confirmBtnId).classList.remove('show');
+      onSelect(t.key);
+    };
+    grid.appendChild(btn);
+  });
+}
+
+function buildNumGrid(gridId, confirmBtnId, typeKey, count, filterFn) {
+  const grid = document.getElementById(gridId);
+  grid.innerHTML = '';
+  for(let i=1;i<=count;i++){
+    const id = typeKey+'-'+String(i).padStart(3,'0');
+    const item = findItem(id);
+    const btn = document.createElement('button');
+    btn.className = 'num-btn';
+    btn.textContent = String(i).padStart(3,'0');
+    btn.dataset.id = id;
+    if(item){
+      if(!filterFn(item)){
+        btn.classList.add('out');
+        const statusMap={out:'外借',res:'預約'};
+        btn.title = statusMap[item.status]||'不可用';
+        btn.onclick=()=>alert(id+' 目前'+btn.title+'中，無法操作');
+        grid.appendChild(btn); continue;
+      }
+      if(item.status==='res') btn.classList.add('reserved');
+    }
+    btn.onclick=()=>{
+      grid.querySelectorAll('.num-btn').forEach(b=>b.classList.remove('selected'));
+      btn.classList.add('selected');
+      document.getElementById(confirmBtnId).classList.add('show');
+    };
+    grid.appendChild(btn);
+  }
+}
+
+// ==================== BORROW ====================
 function initBorrow() {
-  scannedBId = null;
+  scannedBId=null; selectedBType=''; selectedBNum='';
   ['b-preview','b-form','b-sig-card'].forEach(id=>document.getElementById(id).classList.remove('show'));
   document.getElementById('b-submit').classList.remove('show');
   document.getElementById('b-success').classList.remove('show');
-  document.getElementById('b-staff').value='';
-  document.getElementById('b-client').value='';
-  document.getElementById('b-note').value='';
+  document.getElementById('b-scan-card').style.display='block';
+  document.querySelector('#page-borrow .scan-top').style.display='';
+  document.querySelector('#page-borrow .scan-toggle').style.display='';
+  document.getElementById('b-reader-wrap').style.display='block';
+  document.getElementById('b-manual-area').classList.remove('show');
   clearCanvas('b-sig');
+  ['b-staff','b-client','b-phone','b-note'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('b-due').value='';
+  buildTypeGrid('b-type-grid','b-num-section','b-num-grid','b-confirm-manual',
+    i=>i.status==='in', k=>selectedBType=k);
   setBorrowMode('scan');
 }
 
-function setBorrowMode(mode) {
+function setBorrowMode(mode){
   document.getElementById('b-scan-tab').classList.toggle('active',mode==='scan');
   document.getElementById('b-manual-tab').classList.toggle('active',mode==='manual');
-  document.getElementById('borrow-reader-wrap').style.display = mode==='scan'?'block':'none';
+  document.getElementById('b-reader-wrap').style.display=mode==='scan'?'block':'none';
   document.getElementById('b-manual-area').classList.toggle('show',mode==='manual');
   if(mode==='scan'){
-    if(!borrowScanner){ document.getElementById('borrow-reader').innerHTML=''; borrowScanner=startScanner('borrow-reader',onBorrow); }
+    if(!borrowScanner){document.getElementById('b-reader').innerHTML='';borrowScanner=startScanner('b-reader',onBorrow);}
   } else {
-    if(borrowScanner){try{borrowScanner.stop();}catch(e){} borrowScanner=null;}
+    if(borrowScanner){try{borrowScanner.stop();}catch(e){}borrowScanner=null;}
   }
 }
 
-function onBorrow(id) {
-  const item = findItem(id);
-  if(!item){showAlert('找不到此服裝 ID：'+id+'\n請確認條碼正確');return;}
-  if(item.status==='out'){
-    alert('此衣服目前外借中，無法再次借出');
-    goHome(); // 問題2：警告後回首頁
-    return;
-  }
-  scannedBId = item.id;
-  document.getElementById('b-item-id').textContent = item.id;
-  document.getElementById('b-item-meta').textContent = item.name;
+function confirmBorrowManual(){
+  const sel = document.querySelector('#b-num-grid .num-btn.selected');
+  if(!sel){alert('請選擇編號');return;}
+  onBorrow(sel.dataset.id);
+}
+
+function onBorrow(id){
+  const item=findItem(id);
+  if(!item){alert('找不到此服裝 ID：'+id);return;}
+  if(item.status==='out'){alert('此衣服目前外借中，無法再次借出');goHome();return;}
+  if(item.status==='res'){alert('此衣服目前有預約，請先確認預約狀況');return;}
+  scannedBId=item.id;
+  document.getElementById('b-item-id').textContent=item.id;
+  document.getElementById('b-item-meta').textContent=item.name;
   document.getElementById('b-preview').classList.add('show');
   document.getElementById('b-form').classList.add('show');
   document.getElementById('b-sig-card').classList.add('show');
   document.getElementById('b-submit').classList.add('show');
-  // 問題1：掃描成功後隱藏掃描器
-  document.getElementById('borrow-reader-wrap').style.display='none';
-  document.getElementById('b-scan-tab').style.display='none';
-  document.getElementById('b-manual-tab').style.display='none';
-  document.querySelector('#page-borrow .scanner-top').style.display='none';
-  document.querySelector('#page-borrow .scan-toggle').style.display='none';
+  hideScanCard('b');
   initSig('b-sig');
-  if(borrowScanner){try{borrowScanner.stop();}catch(e){} borrowScanner=null;}
+  if(borrowScanner){try{borrowScanner.stop();}catch(e){}borrowScanner=null;}
 }
 
-function manualBorrow() {
-  const v = document.getElementById('b-manual-input').value.trim();
-  if(!v){showAlert('請輸入服裝 ID');return;}
-  onBorrow(v);
-}
-
-async function submitBorrow() {
-  const staff = document.getElementById('b-staff').value.trim();
-  const client = document.getElementById('b-client').value.trim();
-  const phone = document.getElementById('b-phone').value.trim();
-  const due = document.getElementById('b-due').value;
-  const note = document.getElementById('b-note').value;
-  if(!staff){showAlert('請選擇借出業務');return;}
-  if(!client){showAlert('請填寫借用客戶名稱');return;}
-  if(!phone){showAlert('請填寫客戶聯絡電話');return;}
-  if(!due){showAlert('請選擇預計歸還日期');return;}
-  if(!hasSig('b-sig')){showAlert('請完成借用人手寫簽名');return;}
-
-  const btn = document.getElementById('b-submit');
-  btn.textContent = '上傳中…'; btn.disabled = true;
-
-  const bDate = today();
-  const item = findItem(scannedBId);
-
-  // 第一步：傳文字資料
-  const r = await callAPIAsync({action:'borrow',itemId:scannedBId,staff,client,phone,borrowDate:bDate,dueDate:due,note});
-  if(!r || !r.success){ showAlert('外借登記失敗，請再試一次'); btn.textContent='確認外借 →'; btn.disabled=false; return; }
-
-  // 第二步：分段傳簽名
-  const sigData = getCanvasWithWhiteBg('b-sig');
-  await uploadSigInChunks(r.recordId, sigData);
-
-  if(item){ item.status='out';item.staff=staff;item.client=client;item.borrowDate=bDate;item.dueDate=due; }
-  document.getElementById('b-success-msg').textContent = scannedBId+'\n借出給 '+client+'（'+phone+'）\n業務：'+staff+'\n預計 '+due+' 前歸還';
+async function submitBorrow(){
+  const staff=document.getElementById('b-staff').value.trim();
+  const client=document.getElementById('b-client').value.trim();
+  const phone=document.getElementById('b-phone').value.trim();
+  const due=document.getElementById('b-due').value;
+  const note=document.getElementById('b-note').value;
+  if(!staff){alert('請選擇借出業務');return;}
+  if(!client){alert('請填寫借用客戶名稱');return;}
+  if(!phone){alert('請填寫客戶聯絡電話');return;}
+  if(!due){alert('請選擇預計歸還日期');return;}
+  if(!hasSig('b-sig')){alert('請完成借用人手寫簽名');return;}
+  const btn=document.getElementById('b-submit');
+  btn.textContent='上傳中…';btn.disabled=true;
+  const bDate=today();
+  const r=await callAPIAsync({action:'borrow',itemId:scannedBId,staff,client,phone,borrowDate:bDate,dueDate:due,note});
+  if(!r||!r.success){alert('外借登記失敗，請再試一次');btn.textContent='確認外借 →';btn.disabled=false;return;}
+  const sigData=getCanvasWithWhiteBg('b-sig');
+  await uploadSigPost(r.recordId,sigData);
+  const item=findItem(scannedBId);
+  if(item){item.status='out';item.staff=staff;item.client=client;item.phone=phone;item.borrowDate=bDate;item.dueDate=due;}
+  document.getElementById('b-success-msg').textContent=scannedBId+'\n借出給 '+client+'（'+phone+'）\n業務：'+staff+'\n預計 '+due+' 前歸還';
   ['b-preview','b-form','b-sig-card'].forEach(id=>document.getElementById(id).classList.remove('show'));
-  btn.classList.remove('show'); btn.textContent='確認外借 →'; btn.disabled=false;
+  btn.classList.remove('show');btn.textContent='確認外借 →';btn.disabled=false;
   document.getElementById('b-success').classList.add('show');
-  refreshStats();
+  updateDashboard();
 }
 
-function resetBorrow() { initBorrow(); goHome(); }
+function resetBorrow(){initBorrow();goHome();}
 
-// ===================== RETURN =====================
-function initReturn() {
-  scannedRId = null;
+// ==================== RETURN ====================
+function initReturn(){
+  scannedRId=null;selectedRType='';selectedRNum='';
   ['r-preview','r-form','r-sig-card'].forEach(id=>document.getElementById(id).classList.remove('show'));
   document.getElementById('r-submit').classList.remove('show');
   document.getElementById('r-success').classList.remove('show');
-  document.getElementById('r-note').value='';
+  document.getElementById('r-scan-card').style.display='block';
+  document.querySelector('#page-return .scan-top').style.display='';
+  document.querySelector('#page-return .scan-toggle').style.display='';
+  document.getElementById('r-reader-wrap').style.display='block';
+  document.getElementById('r-manual-area').classList.remove('show');
   clearCanvas('r-sig');
+  ['r-handler','r-note'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  buildTypeGrid('r-type-grid','r-num-section','r-num-grid','r-confirm-manual',
+    i=>i.status==='out'||i.status==='res', k=>selectedRType=k);
   setReturnMode('scan');
 }
 
-function setReturnMode(mode) {
+function setReturnMode(mode){
   document.getElementById('r-scan-tab').classList.toggle('active',mode==='scan');
   document.getElementById('r-manual-tab').classList.toggle('active',mode==='manual');
-  document.getElementById('return-reader-wrap').style.display = mode==='scan'?'block':'none';
+  document.getElementById('r-reader-wrap').style.display=mode==='scan'?'block':'none';
   document.getElementById('r-manual-area').classList.toggle('show',mode==='manual');
   if(mode==='scan'){
-    if(!returnScanner){ document.getElementById('return-reader').innerHTML=''; returnScanner=startScanner('return-reader',onReturn); }
+    if(!returnScanner){document.getElementById('r-reader').innerHTML='';returnScanner=startScanner('r-reader',onReturn);}
   } else {
-    if(returnScanner){try{returnScanner.stop();}catch(e){} returnScanner=null;}
+    if(returnScanner){try{returnScanner.stop();}catch(e){}returnScanner=null;}
   }
 }
 
-function onReturn(id) {
-  const item = findItem(id);
-  if(!item){showAlert('找不到此服裝 ID：'+id);return;}
-  if(item.status==='in'){
-    alert('此衣服目前在庫中，無需歸還操作');
-    goHome(); return;
-  }
-  scannedRId = item.id;
-  document.getElementById('r-item-id').textContent = item.id;
-  document.getElementById('r-item-meta').textContent = item.name;
-  document.getElementById('r-staff-val').textContent = item.staff||'—';
-  document.getElementById('r-client-val').textContent = item.client||'—';
-  document.getElementById('r-bdate-val').textContent = item.borrowDate||'—';
-  document.getElementById('r-ddate-val').textContent = item.dueDate||'—';
+function confirmReturnManual(){
+  const sel=document.querySelector('#r-num-grid .num-btn.selected');
+  if(!sel){alert('請選擇編號');return;}
+  onReturn(sel.dataset.id);
+}
+
+function onReturn(id){
+  const item=findItem(id);
+  if(!item){alert('找不到此服裝 ID：'+id);return;}
+  if(item.status==='in'){alert('此衣服目前在庫中，無需歸還操作');goHome();return;}
+  scannedRId=item.id;
+  document.getElementById('r-item-id').textContent=item.id;
+  document.getElementById('r-item-meta').textContent=item.name;
+  document.getElementById('r-staff-val').textContent=item.staff||'—';
+  document.getElementById('r-client-val').textContent=item.client||'—';
+  document.getElementById('r-bdate-val').textContent=item.borrowDate||'—';
+  document.getElementById('r-ddate-val').textContent=item.dueDate||'—';
   document.getElementById('r-preview').classList.add('show');
   document.getElementById('r-form').classList.add('show');
   document.getElementById('r-sig-card').classList.add('show');
   document.getElementById('r-submit').classList.add('show');
-  // 問題1：隱藏掃描器
-  document.getElementById('return-reader-wrap').style.display='none';
-  document.querySelector('#page-return .scanner-top').style.display='none';
-  document.querySelector('#page-return .scan-toggle').style.display='none';
+  hideScanCard('r');
   initSig('r-sig');
-  if(returnScanner){try{returnScanner.stop();}catch(e){} returnScanner=null;}
+  if(returnScanner){try{returnScanner.stop();}catch(e){}returnScanner=null;}
 }
 
-function manualReturn() {
-  const v = document.getElementById('r-manual-input').value.trim();
-  if(!v){showAlert('請輸入服裝 ID');return;}
-  onReturn(v);
-}
-
-async function submitReturn() {
-  if(!hasSig('r-sig')){showAlert('請完成收件人手寫簽名確認');return;}
-  const condition = document.getElementById('r-condition').value;
-  const note = document.getElementById('r-note').value;
-  const rDate = today();
-
-  const btn = document.getElementById('r-submit');
-  btn.textContent = '上傳中…'; btn.disabled = true;
-
-  // 第一步：傳文字資料
-  const r = await callAPIAsync({action:'return',itemId:scannedRId,condition,note,returnDate:rDate});
-  if(!r || !r.success){ showAlert('歸還登記失敗，請再試一次'); btn.textContent='確認歸還 →'; btn.disabled=false; return; }
-
-  // 第二步：分段傳簽名
-  const sigData = getCanvasWithWhiteBg('r-sig');
-  await uploadSigInChunks(r.recordId, sigData);
-
-  const item = findItem(scannedRId);
-  if(item){item.status='in';item.staff='';item.client='';item.borrowDate='';item.dueDate='';}
-  document.getElementById('r-success-msg').textContent = scannedRId+' 已確認收回\n衣服狀態：'+condition+'\n庫存已自動更新';
+async function submitReturn(){
+  const handler=document.getElementById('r-handler').value.trim();
+  const condition=document.getElementById('r-condition').value;
+  const note=document.getElementById('r-note').value;
+  if(!handler){alert('請選擇經手業務');return;}
+  if(!hasSig('r-sig')){alert('請完成收件人手寫簽名確認');return;}
+  const btn=document.getElementById('r-submit');
+  btn.textContent='上傳中…';btn.disabled=true;
+  const rDate=today();
+  const r=await callAPIAsync({action:'return',itemId:scannedRId,handler,condition,note,returnDate:rDate});
+  if(!r||!r.success){alert('歸還登記失敗，請再試一次');btn.textContent='確認歸還 →';btn.disabled=false;return;}
+  const sigData=getCanvasWithWhiteBg('r-sig');
+  await uploadSigPost(r.recordId,sigData);
+  const item=findItem(scannedRId);
+  if(item){item.status='in';item.staff='';item.client='';item.phone='';item.borrowDate='';item.dueDate='';}
+  document.getElementById('r-success-msg').textContent=scannedRId+' 已確認收回\n經手業務：'+handler+'\n衣服狀態：'+condition;
   ['r-preview','r-form','r-sig-card'].forEach(id=>document.getElementById(id).classList.remove('show'));
-  btn.classList.remove('show'); btn.textContent='確認歸還 →'; btn.disabled=false;
+  btn.classList.remove('show');btn.textContent='確認歸還 →';btn.disabled=false;
   document.getElementById('r-success').classList.add('show');
-  refreshStats();
+  updateDashboard();
 }
 
-function resetReturn() { initReturn(); goHome(); }
+function resetReturn(){initReturn();goHome();}
 
-// ===================== INVENTORY =====================
-function initInventory() {
-  if(inventory.length === 0){
-    document.getElementById('inv-list').innerHTML='<div class="empty-state"><div class="empty-icon">⏳</div><div>載入中…</div></div>';
-    callAPI({action:'getInventory'},r=>{ if(r&&r.items){inventory=r.items;} renderInv(); });
+// ==================== RESERVE ====================
+function initReserve(){
+  scannedResId=null;selectedResType='';selectedResNum='';
+  ['res-preview','res-form'].forEach(id=>document.getElementById(id).classList.remove('show'));
+  document.getElementById('res-submit').classList.remove('show');
+  document.getElementById('res-success').classList.remove('show');
+  document.getElementById('res-scan-card').style.display='block';
+  document.querySelector('#page-reserve .scan-top').style.display='';
+  document.querySelector('#page-reserve .scan-toggle').style.display='';
+  document.getElementById('res-reader-wrap').style.display='block';
+  document.getElementById('res-manual-area').classList.remove('show');
+  ['res-staff','res-client','res-phone','res-note'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('res-borrow-date').value='';
+  document.getElementById('res-due').value='';
+  buildTypeGrid('res-type-grid','res-num-section','res-num-grid','res-confirm-manual',
+    i=>i.status==='in', k=>selectedResType=k);
+  setReserveMode('scan');
+}
+
+function setReserveMode(mode){
+  document.getElementById('res-scan-tab').classList.toggle('active',mode==='scan');
+  document.getElementById('res-manual-tab').classList.toggle('active',mode==='manual');
+  document.getElementById('res-reader-wrap').style.display=mode==='scan'?'block':'none';
+  document.getElementById('res-manual-area').classList.toggle('show',mode==='manual');
+  if(mode==='scan'){
+    if(!reserveScanner){document.getElementById('res-reader').innerHTML='';reserveScanner=startScanner('res-reader',onReserve);}
   } else {
-    renderInv();
+    if(reserveScanner){try{reserveScanner.stop();}catch(e){}reserveScanner=null;}
   }
 }
 
-function renderInv() {
-  const q = (document.getElementById('inv-q').value||'').toLowerCase();
-  const items = inventory.filter(i=>{
-    if(invTabFilter!=='all' && i.status!==invTabFilter) return false;
-    if(!q) return true;
-    return i.id.toLowerCase().includes(q)||i.name.toLowerCase().includes(q)||(i.client&&i.client.toLowerCase().includes(q));
+function confirmReserveManual(){
+  const sel=document.querySelector('#res-num-grid .num-btn.selected');
+  if(!sel){alert('請選擇編號');return;}
+  onReserve(sel.dataset.id);
+}
+
+function onReserve(id){
+  const item=findItem(id);
+  if(!item){alert('找不到此服裝 ID：'+id);return;}
+  if(item.status==='out'){alert('此衣服目前外借中，無法預約');return;}
+  if(item.status==='res'){alert('此衣服已有預約');return;}
+  scannedResId=item.id;
+  document.getElementById('res-item-id').textContent=item.id;
+  document.getElementById('res-item-meta').textContent=item.name;
+  document.getElementById('res-preview').classList.add('show');
+  document.getElementById('res-form').classList.add('show');
+  document.getElementById('res-submit').classList.add('show');
+  hideScanCard('res');
+  if(reserveScanner){try{reserveScanner.stop();}catch(e){}reserveScanner=null;}
+}
+
+async function submitReserve(){
+  const staff=document.getElementById('res-staff').value.trim();
+  const client=document.getElementById('res-client').value.trim();
+  const phone=document.getElementById('res-phone').value.trim();
+  const borrowDate=document.getElementById('res-borrow-date').value;
+  const due=document.getElementById('res-due').value;
+  const note=document.getElementById('res-note').value;
+  if(!staff){alert('請選擇負責業務');return;}
+  if(!client){alert('請填寫預約客戶名稱');return;}
+  if(!phone){alert('請填寫客戶聯絡電話');return;}
+  if(!borrowDate){alert('請選擇預計借出日期');return;}
+  if(!due){alert('請選擇預計歸還日期');return;}
+  const btn=document.getElementById('res-submit');
+  btn.textContent='登記中…';btn.disabled=true;
+  const r=await callAPIAsync({action:'reserve',itemId:scannedResId,staff,client,phone,borrowDate,dueDate:due,note});
+  if(!r||!r.success){alert('預約登記失敗，請再試一次');btn.textContent='確認預約 →';btn.disabled=false;return;}
+  const item=findItem(scannedResId);
+  if(item){item.status='res';item.staff=staff;item.client=client;item.phone=phone;item.borrowDate=borrowDate;item.dueDate=due;}
+  document.getElementById('res-success-msg').textContent=scannedResId+'\n預約給 '+client+'（'+phone+'）\n業務：'+staff+'\n預計 '+borrowDate+' 借出';
+  ['res-preview','res-form'].forEach(id=>document.getElementById(id).classList.remove('show'));
+  btn.classList.remove('show');btn.textContent='確認預約 →';btn.disabled=false;
+  document.getElementById('res-success').classList.add('show');
+  updateDashboard();
+}
+
+function resetReserve(){initReserve();goHome();}
+
+// ==================== INVENTORY ====================
+function initInventory(){
+  renderInvFilters();
+  renderInv();
+}
+
+function renderInvFilters(){
+  const wrap=document.getElementById('inv-filters');
+  wrap.innerHTML='';
+  INV_FILTERS.forEach(f=>{
+    const btn=document.createElement('button');
+    btn.className='filter-chip'+(invTypeFilter===f.key?' active':'');
+    btn.textContent=f.label;
+    btn.onclick=()=>{
+      invTypeFilter=f.key;
+      wrap.querySelectorAll('.filter-chip').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      renderInv();
+    };
+    wrap.appendChild(btn);
   });
-  const el = document.getElementById('inv-list');
-  if(!items.length){
-    el.innerHTML='<div class="empty-state"><div class="empty-icon">🔍</div><div>沒有符合條件的衣服</div></div>';
-    return;
-  }
-  el.innerHTML = items.map(item=>`
-    <div class="inv-item" onclick="showDetail('${item.id}')">
-      <div class="inv-item-icon">${item.status==='in'?'👕':'📤'}</div>
-      <div class="inv-item-info">
-        <div class="inv-item-id">${item.id}</div>
-        <div class="inv-item-sub">${item.status==='in'?item.name:'→ '+item.client+'（'+item.staff+'）'}</div>
-      </div>
-      <span class="inv-chip ${item.status}">${item.status==='in'?'在庫中':'外借中'}</span>
-    </div>`).join('');
 }
 
-function setInvTab(tab,el) {
+function setInvTab(tab,el){
   invTabFilter=tab;
   document.querySelectorAll('.inv-tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
   renderInv();
 }
 
-function showDetail(id) {
-  const item=findItem(id); if(!item) return;
+function renderInv(){
+  const items=inventory.filter(i=>{
+    const matchTab = i.status===invTabFilter;
+    const matchType = !invTypeFilter || i.id.startsWith(invTypeFilter);
+    return matchTab && matchType;
+  });
+  const list=document.getElementById('inv-list');
+  if(!items.length){
+    list.innerHTML='<div class="empty-state"><div class="empty-icon">🔍</div><div>沒有符合條件的衣服</div></div>';
+    return;
+  }
+  const icons={in:'👕',out:'📤',res:'📅'};
+  list.innerHTML=items.map(item=>`
+    <div class="inv-item" onclick="showDetail('${item.id}')">
+      <div class="inv-ico">${icons[item.status]||'👕'}</div>
+      <div class="inv-info">
+        <div class="inv-id">${item.id}</div>
+        <div class="inv-sub">${item.status==='in'?item.name:item.status==='res'?'預約：'+item.client+'（'+item.staff+'）':'→ '+item.client+'（'+item.staff+'）'}</div>
+      </div>
+      <span class="inv-chip ${item.status==='in'?'in':item.status==='res'?'res':'out'}">${item.status==='in'?'在庫中':item.status==='res'?'預約中':'外借中'}</span>
+    </div>`).join('');
+}
+
+// ==================== MODAL ====================
+function showDetail(id){
+  const item=findItem(id);if(!item)return;
+  modalCurrentId=id;
   document.getElementById('m-id').textContent=item.id;
   document.getElementById('m-name').textContent=item.name;
-  const rows = item.status==='in' ?
-    [['目前狀態','在庫中 ✅'],['可借出','是']] :
-    [['目前狀態','外借中 📤'],['借出業務',item.staff||'—'],['借出客戶',item.client||'—'],['客戶電話',item.phone||'—'],['借出日期',item.borrowDate||'—'],['預計歸還',item.dueDate||'—']];
-  document.getElementById('m-rows').innerHTML = rows.map(([l,v])=>`
-    <div class="modal-row">
-      <span class="modal-label">${l}</span>
-      <span class="modal-val">${v}</span>
-    </div>`).join('');
+  const actionBtn=document.getElementById('m-action-btn');
+  let rows=[];
+  if(item.status==='in'){
+    rows=[['目前狀態','在庫中 ✅'],['可借出','是']];
+    actionBtn.style.display='none';
+  } else if(item.status==='res'){
+    rows=[['目前狀態','預約中 📅'],['負責業務',item.staff||'—'],['預約客戶',item.client||'—'],['客戶電話',item.phone||'—'],['預計借出',item.borrowDate||'—'],['預計歸還',item.dueDate||'—']];
+    actionBtn.style.display='block';
+    actionBtn.textContent='📋 正式外借';
+  } else {
+    rows=[['目前狀態','外借中 📤'],['借出業務',item.staff||'—'],['借出客戶',item.client||'—'],['客戶電話',item.phone||'—'],['借出日期',item.borrowDate||'—'],['預計歸還',item.dueDate||'—']];
+    actionBtn.style.display='none';
+  }
+  document.getElementById('m-rows').innerHTML=rows.map(([l,v])=>`<div class="modal-row"><span class="modal-label">${l}</span><span class="modal-val">${v}</span></div>`).join('');
   document.getElementById('modal').classList.add('show');
 }
 
-function closeModal(){ document.getElementById('modal').classList.remove('show'); }
+function closeModal(){document.getElementById('modal').classList.remove('show');}
 
-// ===================== SIGNATURE =====================
-function initSig(id) {
-  const c=document.getElementById(id); if(!c||c._ready) return; c._ready=true;
-  const ctx=c.getContext('2d'); let drawing=false,lx=0,ly=0;
-  function pos(e){ const r=c.getBoundingClientRect(),s=e.touches?e.touches[0]:e; return {x:(s.clientX-r.left)*(c.width/r.width),y:(s.clientY-r.top)*(c.height/r.height)}; }
+function modalToBorrow(){
+  const item=findItem(modalCurrentId);
+  if(!item)return;
+  pendingReserveData={
+    staff:item.staff, client:item.client, phone:item.phone,
+    dueDate:item.dueDate, itemId:item.id
+  };
+  closeModal();
+  goPage('borrow');
+  // 延遲填入預約資料
+  setTimeout(()=>{
+    onBorrow(item.id);
+    if(item.staff) document.getElementById('b-staff').value=item.staff;
+    if(item.client) document.getElementById('b-client').value=item.client;
+    if(item.phone) document.getElementById('b-phone').value=item.phone;
+    if(item.dueDate) document.getElementById('b-due').value=item.dueDate;
+  },300);
+}
+
+// ==================== SIGNATURE ====================
+function initSig(id){
+  const c=document.getElementById(id);if(!c||c._ready)return;c._ready=true;
+  const ctx=c.getContext('2d');let drawing=false,lx=0,ly=0;
+  function pos(e){const r=c.getBoundingClientRect(),s=e.touches?e.touches[0]:e;return{x:(s.clientX-r.left)*(c.width/r.width),y:(s.clientY-r.top)*(c.height/r.height)};}
   function draw(e){if(!drawing)return;const p=pos(e);ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(p.x,p.y);ctx.strokeStyle='#1a1a1a';ctx.lineWidth=2.5;ctx.lineCap='round';ctx.lineJoin='round';ctx.stroke();lx=p.x;ly=p.y;}
   c.addEventListener('mousedown',e=>{drawing=true;const p=pos(e);lx=p.x;ly=p.y;});
   c.addEventListener('mousemove',draw);
@@ -972,99 +1014,60 @@ function initSig(id) {
   c.addEventListener('touchmove',e=>{e.preventDefault();draw(e);},{passive:false});
   c.addEventListener('touchend',e=>{e.preventDefault();drawing=false;},{passive:false});
 }
-
-function clearCanvas(id){ const c=document.getElementById(id); if(c) c.getContext('2d').clearRect(0,0,c.width,c.height); }
-function clearSig(p){ clearCanvas(p+'-sig'); }
-
-function hasSig(id){
-  const c=document.getElementById(id); if(!c) return false;
-  const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;
-  for(let i=3;i<d.length;i+=4){if(d[i]>10)return true;} return false;
+function clearCanvas(id){const c=document.getElementById(id);if(c){c.getContext('2d').clearRect(0,0,c.width,c.height);}}
+function clearSig(id){clearCanvas(id);}
+function hasSig(id){const c=document.getElementById(id);if(!c)return false;const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;for(let i=3;i<d.length;i+=4){if(d[i]>10)return true;}return false;}
+function getCanvasWithWhiteBg(id){
+  const src=document.getElementById(id);
+  const tmp=document.createElement('canvas');
+  const scale=Math.min(1,400/src.width);
+  tmp.width=Math.floor(src.width*scale);tmp.height=Math.floor(src.height*scale);
+  const ctx=tmp.getContext('2d');
+  ctx.fillStyle='#ffffff';ctx.fillRect(0,0,tmp.width,tmp.height);
+  ctx.drawImage(src,0,0,tmp.width,tmp.height);
+  return tmp.toDataURL('image/jpeg',0.5);
 }
 
-// ===================== UTILS =====================
-async function uploadSigInChunks(recordId, sigData) {
-  // 用 POST 直接傳送簽名，不受 URL 長度限制
-  try {
-    const r = await fetch(GAS_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ recordId, sigData })
-    });
-    // no-cors 模式下無法讀取回應，但資料會送出
-    console.log('簽名已送出');
-  } catch(e) {
-    console.warn('簽名上傳失敗：', e);
-  }
-}
-
-function getCanvasWithWhiteBg(canvasId) {
-  const src = document.getElementById(canvasId);
-  const tmp = document.createElement('canvas');
-  // 縮小到最大 400px 寬，減少檔案大小
-  const scale = Math.min(1, 400 / src.width);
-  tmp.width = Math.floor(src.width * scale);
-  tmp.height = Math.floor(src.height * scale);
-  const ctx = tmp.getContext('2d');
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, tmp.width, tmp.height);
-  ctx.drawImage(src, 0, 0, tmp.width, tmp.height);
-  return tmp.toDataURL('image/jpeg', 0.5);
-}
-
-function findItem(id){ return inventory.find(i=>i.id.toUpperCase()===id.toUpperCase()); }
-function today(){ return new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit'}).replace(/\//g,'-'); }
-function showAlert(msg){ alert(msg); }
-
+// ==================== API ====================
 async function callAPIAsync(payload){
-  if(!GAS_URL) return null;
+  if(!GAS_URL)return null;
   try{
-    const action = payload.action;
-    const dataCopy = Object.assign({}, payload);
-    delete dataCopy.action;
-    const encoded = encodeURIComponent(JSON.stringify(dataCopy));
-    const url = GAS_URL + '?action=' + action + '&data=' + encoded;
-    const r = await fetch(url);
-    const text = await r.text();
-    return JSON.parse(text);
-  }catch(e){ console.warn('API error:',e); return null; }
+    const action=payload.action;
+    const d=Object.assign({},payload);delete d.action;
+    const url=GAS_URL+'?action='+action+'&data='+encodeURIComponent(JSON.stringify(d));
+    const r=await fetch(url);
+    return await r.json();
+  }catch(e){console.warn('API error:',e);return null;}
 }
 
-async function callAPI(payload, cb){
-  const r = await callAPIAsync(payload);
-  if(cb) cb(r);
+async function uploadSigPost(recordId,sigData){
+  try{
+    await fetch(GAS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify({recordId,sigData})});
+  }catch(e){console.warn('簽名上傳失敗：',e);}
 }
 
-function sendToGAS(){
-  if(!GAS_URL){showAlert('請先在 HTML 檔案中填入 GAS_URL！');return;}
-  callAPI({action:'ping'},r=>{ showAlert(r&&r.success?'✅ 連線成功！\n'+r.message:'❌ 連線失敗，請確認部署設定'); });
-}
+// ==================== UTILS ====================
+function findItem(id){return inventory.find(i=>i.id.toUpperCase()===id.toUpperCase());}
+function today(){return new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit'}).replace(/\//g,'-');}
 
-// ===================== INIT =====================
-document.getElementById('stat-in').textContent = '…';
-document.getElementById('stat-out').textContent = '…';
-callAPI({action:'getInventory'}, r => {
-  if(r && r.items){ inventory = r.items; }
-  refreshStats();
-});
+// ==================== INIT ====================
+document.getElementById('d-bversion').textContent='…';
+document.getElementById('d-cversion').textContent='…';
+document.getElementById('d-hdt').textContent='…';
+document.getElementById('d-res').textContent='…';
+document.getElementById('d-out').textContent='…';
+loadInventory();
 
-// Service Worker：自動偵測更新
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('/maotime-app/sw.js').then(reg=>{
     reg.addEventListener('updatefound',()=>{
-      const newSW = reg.installing;
-      newSW.addEventListener('statechange',()=>{
-        if(newSW.state==='installed' && navigator.serviceWorker.controller){
-          // 有新版本，自動重新整理
-          newSW.postMessage({action:'skipWaiting'});
-        }
+      const nw=reg.installing;
+      nw.addEventListener('statechange',()=>{
+        if(nw.state==='installed'&&navigator.serviceWorker.controller) nw.postMessage({action:'skipWaiting'});
       });
     });
   });
-  navigator.serviceWorker.addEventListener('controllerchange',()=>{
-    window.location.reload();
-  });
+  navigator.serviceWorker.addEventListener('controllerchange',()=>window.location.reload());
 }
 </script>
 </body>
