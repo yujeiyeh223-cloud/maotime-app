@@ -220,7 +220,7 @@ textarea{resize:none;line-height:1.5}
     </div>
     <div>
       <div class="brand-name">卯時設計有限公司</div>
-      <div class="brand-sub">套量服外借管理系統 v14</div>
+      <div class="brand-sub">套量服外借管理系統 v15</div>
     </div>
     <button class="refresh-btn" id="refresh-btn" onclick="doRefresh()" title="刷新庫存">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
@@ -491,6 +491,7 @@ textarea{resize:none;line-height:1.5}
     <div class="modal-name" id="m-name">—</div>
     <div id="m-rows"></div>
     <button class="modal-action blue" id="m-action-btn" style="display:none" onclick="modalToBorrow()">📋 正式外借</button>
+    <button class="modal-action" id="m-cancel-btn" style="display:none;background:#FCEBEB;color:#A32D2D;margin-top:8px" onclick="modalCancelReserve()">✕ 取消預約</button>
     <button class="modal-close" onclick="closeModal()">關閉</button>
   </div>
 </div>
@@ -969,17 +970,20 @@ function showDetail(id){
   document.getElementById('m-id').textContent=item.id;
   document.getElementById('m-name').textContent=item.name;
   const actionBtn=document.getElementById('m-action-btn');
+  const cancelBtn=document.getElementById('m-cancel-btn');
   let rows=[];
   if(item.status==='in'){
     rows=[['目前狀態','在庫中 ✅'],['可借出','是']];
     actionBtn.style.display='none';
+    cancelBtn.style.display='none';
   } else if(item.status==='res'){
     rows=[['目前狀態','預約中 📅'],['負責業務',item.staff||'—'],['預約客戶',item.client||'—'],['客戶電話',item.phone||'—'],['預計借出',item.borrowDate||'—'],['預計歸還',item.dueDate||'—']];
     actionBtn.style.display='block';
-    actionBtn.textContent='📋 正式外借';
+    cancelBtn.style.display='block';
   } else {
     rows=[['目前狀態','外借中 📤'],['借出業務',item.staff||'—'],['借出客戶',item.client||'—'],['客戶電話',item.phone||'—'],['借出日期',item.borrowDate||'—'],['預計歸還',item.dueDate||'—']];
     actionBtn.style.display='none';
+    cancelBtn.style.display='none';
   }
   document.getElementById('m-rows').innerHTML=rows.map(([l,v])=>`<div class="modal-row"><span class="modal-label">${l}</span><span class="modal-val">${v}</span></div>`).join('');
   document.getElementById('modal').classList.add('show');
@@ -990,20 +994,43 @@ function closeModal(){document.getElementById('modal').classList.remove('show');
 function modalToBorrow(){
   const item=findItem(modalCurrentId);
   if(!item)return;
-  pendingReserveData={
-    staff:item.staff, client:item.client, phone:item.phone,
-    dueDate:item.dueDate, itemId:item.id
-  };
   closeModal();
-  goPage('borrow');
-  // 延遲填入預約資料
+  // 直接進入外借頁，跳過掃描，直接填單
+  stopAll();
+  document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
+  document.getElementById('page-borrow').classList.add('active');
+  initBorrow();
+  // 稍微延遲確保 initBorrow 完成後再填入資料
   setTimeout(()=>{
-    onBorrow(item.id);
+    scannedBId = item.id;
+    document.getElementById('b-item-id').textContent = item.id;
+    document.getElementById('b-item-meta').textContent = item.name;
+    document.getElementById('b-preview').classList.add('show');
+    document.getElementById('b-form').classList.add('show');
+    document.getElementById('b-sig-card').classList.add('show');
+    document.getElementById('b-submit').classList.add('show');
+    // 隱藏掃描區
+    document.getElementById('b-scan-card').style.display='none';
+    // 預填資料
     if(item.staff) document.getElementById('b-staff').value=item.staff;
     if(item.client) document.getElementById('b-client').value=item.client;
     if(item.phone) document.getElementById('b-phone').value=item.phone;
     if(item.dueDate) document.getElementById('b-due').value=item.dueDate;
-  },300);
+    initSig('b-sig');
+  },100);
+}
+
+async function modalCancelReserve(){
+  const item=findItem(modalCurrentId);
+  if(!item)return;
+  if(!confirm('確定要取消「'+item.id+'」的預約嗎？\n衣服將回到在庫狀態。'))return;
+  closeModal();
+  const r=await callAPIAsync({action:'cancelReserve',itemId:item.id});
+  if(!r||!r.success){alert('取消預約失敗，請再試一次');return;}
+  item.status='in';item.staff='';item.client='';item.phone='';item.borrowDate='';item.dueDate='';
+  updateDashboard();
+  renderInv();
+  alert('✅ 預約已取消，衣服已回到在庫狀態');
 }
 
 // ==================== SIGNATURE ====================
