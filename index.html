@@ -18,6 +18,7 @@
   --red:#D85A30;--red-l:#FAECE7;
   --blue:#1D5FA8;--blue-l:#E3EEF9;
   --orange:#C47B00;--orange-l:#FDF2DC;
+  --purple:#7F77DD;--purple-l:#EEEDFE;
 }
 @media(prefers-color-scheme:dark){:root{
   --bp:#1c1c1e;--bs:#2c2c2e;--bt:#3a3a3c;
@@ -191,6 +192,8 @@ textarea{resize:none;line-height:1.5}
 .inv-chip.in{background:var(--green-l);color:var(--green)}
 .inv-chip.out{background:var(--red-l);color:var(--red)}
 .inv-chip.res{background:var(--blue-l);color:var(--blue)}
+.inv-chip.out-reserved{background:var(--purple-l);color:var(--purple)}
+.inv-chip.overdue{background:#FCEBEB;color:#A32D2D;}
 .empty-state{padding:48px 24px;text-align:center;color:var(--ts);font-size:14px;display:flex;flex-direction:column;align-items:center;gap:10px}
 .empty-icon{font-size:38px}
 
@@ -241,7 +244,7 @@ textarea{resize:none;line-height:1.5}
     </div>
     <div>
       <div class="brand-name">卯時設計有限公司</div>
-      <div class="brand-sub">套量服外借管理系統 v22</div>
+      <div class="brand-sub">套量服外借管理系統 v25</div>
     </div>
     <button class="refresh-btn" id="refresh-btn" onclick="doRefresh()" title="刷新庫存">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
@@ -282,6 +285,11 @@ textarea{resize:none;line-height:1.5}
       <div class="d-dot"></div>
       <div class="d-num" id="d-out">—</div>
       <div class="d-label">外借中</div>
+    </div>
+    <div class="dash-card orange" onclick="jumpInv('overdue','')">
+      <div class="d-dot"></div>
+      <div class="d-num" id="d-overdue">—</div>
+      <div class="d-label">逾期</div>
     </div>
   </div>
 
@@ -364,6 +372,7 @@ textarea{resize:none;line-height:1.5}
     <div class="suc-icon">✅</div>
     <div class="suc-title">外借登記完成！</div>
     <div class="suc-msg" id="b-success-msg"></div>
+    <button class="suc-back" style="background:#1a1a1a;color:#fff;border-color:#1a1a1a" onclick="generateReceiptFromBorrow()">📄 產生外借憑證</button>
     <button class="suc-back" onclick="resetBorrow()">返回首頁</button>
   </div>
 </div>
@@ -476,7 +485,7 @@ textarea{resize:none;line-height:1.5}
     </div>
     <div class="field-grp"><label class="field-lbl">預約客戶</label><input type="text" id="res-client" placeholder="客戶公司或姓名"></div>
     <div class="field-grp"><label class="field-lbl">客戶聯絡電話</label><input type="tel" id="res-phone" placeholder="例：0912-345-678"></div>
-    <div class="field-grp"><label class="field-lbl">預計借出日期</label><input type="date" id="res-borrow-date"></div>
+    <div class="field-grp"><label class="field-lbl">預計借出日期</label><input type="date" id="res-borrow-date" onchange="updateResDueMin()"></div>
     <div class="field-grp"><label class="field-lbl">預計歸還日期</label><input type="date" id="res-due"></div>
     <div class="field-grp"><label class="field-lbl">備註（選填）</label><textarea id="res-note" rows="2" placeholder="如有特殊說明請填寫"></textarea></div>
   </div>
@@ -496,9 +505,10 @@ textarea{resize:none;line-height:1.5}
     <span class="pg-title">庫存查詢</span>
   </div>
   <div class="inv-tabs">
-    <button class="inv-tab active" id="inv-tab-in"  onclick="setInvTab('in',this)">在庫中</button>
-    <button class="inv-tab" id="inv-tab-res" onclick="setInvTab('res',this)">預約中</button>
-    <button class="inv-tab" id="inv-tab-out" onclick="setInvTab('out',this)">外借中</button>
+    <button class="inv-tab active" id="inv-tab-in"      onclick="setInvTab('in',this)">在庫中</button>
+    <button class="inv-tab" id="inv-tab-res"            onclick="setInvTab('res',this)">預約中</button>
+    <button class="inv-tab" id="inv-tab-out"            onclick="setInvTab('out',this)">外借中</button>
+    <button class="inv-tab" id="inv-tab-overdue"        onclick="setInvTab('overdue',this)">逾期</button>
   </div>
   <div class="filter-scroll" id="inv-filters"></div>
   <div id="inv-list" class="inv-list"></div>
@@ -512,6 +522,7 @@ textarea{resize:none;line-height:1.5}
     <div class="modal-name" id="m-name">—</div>
     <div id="m-rows"></div>
     <button class="modal-action blue" id="m-action-btn" style="display:none" onclick="modalToBorrow()">📋 正式外借</button>
+    <button class="modal-action" id="m-receipt-btn" style="display:none;background:#1a1a1a;color:#fff" onclick="modalGenerateReceipt()">📄 產生外借憑證</button>
     <button class="modal-action" id="m-cancel-btn" style="display:none;background:#FCEBEB;color:#A32D2D;margin-top:8px" onclick="modalCancelReserve()">✕ 取消預約</button>
     <button class="modal-close" onclick="closeModal()">關閉</button>
   </div>
@@ -607,12 +618,14 @@ function updateDashboard() {
   const cv  = inventory.filter(i=>i.status==='in'  && i.id.startsWith('TSH-CT20-C')).length;
   const hdt = inventory.filter(i=>i.status==='in'  && i.id.startsWith('HDT')).length;
   const res = inventory.filter(i=>i.status==='res').length;
-  const out = inventory.filter(i=>i.status==='out').length;
+  const out = inventory.filter(i=>i.status==='out'||i.status==='out-reserved').length;
+  const ovd = inventory.filter(i=>i.status==='overdue').length;
   document.getElementById('d-bversion').textContent = bv;
   document.getElementById('d-cversion').textContent = cv;
   document.getElementById('d-hdt').textContent = hdt;
   document.getElementById('d-res').textContent = res;
   document.getElementById('d-out').textContent = out;
+  document.getElementById('d-overdue').textContent = ovd;
 }
 
 // ==================== SCANNER ====================
@@ -782,6 +795,13 @@ async function submitBorrow(){
   const item=findItem(scannedBId);
   if(item){item.status='out';item.staff=staff;item.client=client;item.phone=phone;item.borrowDate=bDate;item.dueDate=due;}
   document.getElementById('b-success-msg').textContent=scannedBId+'\n借出給 '+client+'（'+phone+'）\n業務：'+staff+'\n預計 '+due+' 前歸還';
+  // 儲存憑證所需資料
+  lastBorrowData = {
+    recordId: r.recordId, itemId: scannedBId,
+    itemName: document.getElementById('b-item-meta').textContent,
+    staff, client, phone, borrowDate: bDate, dueDate: due,
+    sigDataUrl: getCanvasWithWhiteBg('b-sig')
+  };
   ['b-preview','b-form','b-sig-card'].forEach(id=>document.getElementById(id).classList.remove('show'));
   btn.classList.remove('show');btn.textContent='確認外借 →';btn.disabled=false;
   document.getElementById('b-success').classList.add('show');
@@ -860,8 +880,27 @@ async function submitReturn(){
   const sigData=getCanvasWithWhiteBg('r-sig');
   await uploadSigPost(r.recordId,sigData);
   const item=findItem(scannedRId);
-  if(item){item.status='in';item.staff='';item.client='';item.phone='';item.borrowDate='';item.dueDate='';}
-  document.getElementById('r-success-msg').textContent=scannedRId+' 已確認收回\n經手業務：'+handler+'\n衣服狀態：'+condition;
+  if(item){
+    if(r.hasNextReserve && r.nextReserve){
+      // 自動轉為預約中
+      item.status='res';
+      item.staff=r.nextReserve.staff;
+      item.client=r.nextReserve.client;
+      item.phone=r.nextReserve.phone;
+      item.borrowDate=r.nextReserve.borrowDate;
+      item.dueDate=r.nextReserve.dueDate;
+      item.nextStaff=''; item.nextClient=''; item.nextPhone='';
+      item.nextBorrowDate=''; item.nextDueDate='';
+    } else {
+      item.status='in';item.staff='';item.client='';item.phone='';item.borrowDate='';item.dueDate='';
+    }
+  }
+
+  let successMsg = scannedRId+' 已確認收回\n經手業務：'+handler+'\n衣服狀態：'+condition;
+  if(r.hasNextReserve && r.nextReserve){
+    successMsg += '\n\n📅 此衣服已自動轉為預約中\n預約客戶：'+r.nextReserve.client+'\n預計借出：'+r.nextReserve.borrowDate;
+  }
+  document.getElementById('r-success-msg').textContent=successMsg;
   ['r-preview','r-form','r-sig-card'].forEach(id=>document.getElementById(id).classList.remove('show'));
   btn.classList.remove('show');btn.textContent='確認歸還 →';btn.disabled=false;
   document.getElementById('r-success').classList.add('show');
@@ -910,11 +949,28 @@ function confirmReserveManual(){
 function onReserve(id){
   const item=findItem(id);
   if(!item){alert('找不到此服裝 ID：'+id);return;}
-  if(item.status==='out'){alert('此衣服目前外借中，無法預約');return;}
+  if(item.status==='out-reserved'){alert('此衣服外借中且已有下一筆預約，無法再預約');return;}
   if(item.status==='res'){alert('此衣服已有預約');return;}
+  if(item.status!=='in' && item.status!=='out' && item.status!=='overdue'){alert('此衣服目前狀態無法預約');return;}
+
   scannedResId=item.id;
   document.getElementById('res-item-id').textContent=item.id;
   document.getElementById('res-item-meta').textContent=item.name;
+
+  // 如果是外借中，借出日最小值設為歸還日隔天
+  if(item.status==='out'||item.status==='overdue'){
+    const borrowEl = document.getElementById('res-borrow-date');
+    if(item.dueDate){
+      const d = new Date(item.dueDate);
+      d.setDate(d.getDate()+1);
+      borrowEl.min = d.toISOString().split('T')[0];
+    }
+    // 顯示提醒
+    document.getElementById('res-item-meta').textContent = item.name + '（目前外借中，預約借出日需在 '+item.dueDate+' 之後）';
+  } else {
+    document.getElementById('res-borrow-date').min = tomorrow();
+  }
+
   document.getElementById('res-preview').classList.add('show');
   document.getElementById('res-form').classList.add('show');
   document.getElementById('res-submit').classList.add('show');
@@ -951,10 +1007,9 @@ function resetReserve(){initReserve();goHome();}
 
 // ==================== INVENTORY ====================
 function initInventory(){
-  // 同步分頁按鈕 active 狀態
   document.querySelectorAll('.inv-tab').forEach(t=>t.classList.remove('active'));
-  const tabMap={'in':'inv-tab-in','res':'inv-tab-res','out':'inv-tab-out'};
-  const activeTab = document.getElementById(tabMap[invTabFilter]);
+  const tabMap={'in':'inv-tab-in','res':'inv-tab-res','out':'inv-tab-out','overdue':'inv-tab-overdue','out-reserved':'inv-tab-out'};
+  const activeTab = document.getElementById(tabMap[invTabFilter]||'inv-tab-in');
   if(activeTab) activeTab.classList.add('active');
   renderInvFilters();
   renderInv();
@@ -986,7 +1041,10 @@ function setInvTab(tab,el){
 
 function renderInv(){
   const items=inventory.filter(i=>{
-    const matchTab = i.status===invTabFilter;
+    let matchTab = false;
+    if(invTabFilter==='out') matchTab = i.status==='out'||i.status==='out-reserved'||i.status==='overdue';
+    else if(invTabFilter==='overdue') matchTab = i.status==='overdue';
+    else matchTab = i.status===invTabFilter;
     const matchType = !invTypeFilter || i.id.startsWith(invTypeFilter);
     return matchTab && matchType;
   });
@@ -995,7 +1053,8 @@ function renderInv(){
     list.innerHTML='<div class="empty-state"><div class="empty-icon">🔍</div><div>沒有符合條件的衣服</div></div>';
     return;
   }
-  const icons={in:'👕',out:'📤',res:'📅'};
+  const icons={in:'👕',out:'📤',res:'📅','out-reserved':'📤','overdue':'⚠️'};
+  const chipLabel={in:'在庫中',out:'外借中',res:'預約中','out-reserved':'外借（已預約）','overdue':'逾期'};
   list.innerHTML=items.map(item=>`
     <div class="inv-item" onclick="showDetail('${item.id}')">
       <div class="inv-ico">${icons[item.status]||'👕'}</div>
@@ -1003,7 +1062,7 @@ function renderInv(){
         <div class="inv-id">${item.id}</div>
         <div class="inv-sub">${item.status==='in'?item.name:item.status==='res'?'預約：'+item.client+'（'+item.staff+'）':'→ '+item.client+'（'+item.staff+'）'}</div>
       </div>
-      <span class="inv-chip ${item.status==='in'?'in':item.status==='res'?'res':'out'}">${item.status==='in'?'在庫中':item.status==='res'?'預約中':'外借中'}</span>
+      <span class="inv-chip ${item.status}">${chipLabel[item.status]||item.status}</span>
     </div>`).join('');
 }
 
@@ -1015,27 +1074,267 @@ function showDetail(id){
   document.getElementById('m-name').textContent=item.name;
   const actionBtn=document.getElementById('m-action-btn');
   const cancelBtn=document.getElementById('m-cancel-btn');
+  const receiptBtn=document.getElementById('m-receipt-btn');
+  // 預設都隱藏
+  actionBtn.style.display='none'; cancelBtn.style.display='none'; receiptBtn.style.display='none';
   let rows=[];
-  if(item.status==='in'){
     rows=[['目前狀態','在庫中 ✅'],['可借出','是']];
-    actionBtn.style.display='none';
-    cancelBtn.style.display='none';
   } else if(item.status==='res'){
     rows=[['目前狀態','預約中 📅'],['負責業務',item.staff||'—'],['預約客戶',item.client||'—'],['客戶電話',item.phone||'—'],['預計借出',item.borrowDate||'—'],['預計歸還',item.dueDate||'—']];
-    actionBtn.style.display='block';
-    cancelBtn.style.display='block';
-  } else {
+    actionBtn.style.display='block'; cancelBtn.style.display='block';
+  } else if(item.status==='out'){
     rows=[['目前狀態','外借中 📤'],['借出業務',item.staff||'—'],['借出客戶',item.client||'—'],['客戶電話',item.phone||'—'],['借出日期',item.borrowDate||'—'],['預計歸還',item.dueDate||'—']];
-    actionBtn.style.display='none';
-    cancelBtn.style.display='none';
+    receiptBtn.style.display='block';
+  } else if(item.status==='out-reserved'){
+    rows=[
+      ['目前狀態','外借中（已預約）📤📅'],
+      ['借出業務',item.staff||'—'],['借出客戶',item.client||'—'],['客戶電話',item.phone||'—'],
+      ['借出日期',item.borrowDate||'—'],['預計歸還',item.dueDate||'—'],
+      ['─────','─────'],
+      ['下筆預約業務',item.nextStaff||'—'],['下筆預約客戶',item.nextClient||'—'],
+      ['預約電話',item.nextPhone||'—'],['預計借出',item.nextBorrowDate||'—'],['預計歸還',item.nextDueDate||'—']
+    ];
+    cancelBtn.style.display='block'; cancelBtn.textContent='✕ 取消下筆預約';
+    receiptBtn.style.display='block';
+  } else if(item.status==='overdue'){
+    rows=[['目前狀態','⚠️ 逾期未還'],['借出業務',item.staff||'—'],['借出客戶',item.client||'—'],['客戶電話',item.phone||'—'],['借出日期',item.borrowDate||'—'],['預計歸還',item.dueDate||'—']];
+    receiptBtn.style.display='block';
   }
+
   document.getElementById('m-rows').innerHTML=rows.map(([l,v])=>`<div class="modal-row"><span class="modal-label">${l}</span><span class="modal-val">${v}</span></div>`).join('');
   document.getElementById('modal').classList.add('show');
 }
 
-function closeModal(){document.getElementById('modal').classList.remove('show');}
+// ==================== 外借憑證 ====================
 
-function modalToBorrow(){
+// 外借成功後直接產生（有當次簽名 canvas）
+let lastBorrowData = null;
+
+function generateReceiptFromBorrow(){
+  if(!lastBorrowData){ alert('找不到外借資料，請重新操作'); return; }
+  const d = lastBorrowData;
+  const sigDataUrl = d.sigDataUrl || null;
+  buildAndDownloadReceipt({
+    recordId: d.recordId, itemId: d.itemId, itemName: d.itemName,
+    staff: d.staff, client: d.client, phone: d.phone,
+    borrowDate: d.borrowDate, dueDate: d.dueDate,
+    sigDataUrl: sigDataUrl
+  });
+}
+
+// 從庫存列表 modal 產生（需從 API 取得簽名連結）
+async function modalGenerateReceipt(){
+  const item = findItem(modalCurrentId);
+  if(!item) return;
+  closeModal();
+  alert('正在載入憑證資料...');
+  const r = await callAPIAsync({action:'getBorrowRecord', itemId: item.id});
+  if(!r || !r.success){ alert('找不到外借紀錄'); return; }
+  const rec = r.record;
+  buildAndDownloadReceipt({
+    recordId: rec.recordId, itemId: rec.itemId, itemName: item.name,
+    staff: rec.staff, client: rec.client, phone: rec.phone,
+    borrowDate: rec.borrowDate, dueDate: rec.dueDate,
+    sigUrl: rec.signatureUrl
+  });
+}
+
+async function buildAndDownloadReceipt(data){
+  const canvas = document.createElement('canvas');
+  const W = 750, PAD = 40;
+  canvas.width = W;
+
+  // 先計算高度（需要知道簽名高度）
+  const sigH = 120;
+  canvas.height = 620 + sigH;
+  const ctx = canvas.getContext('2d');
+
+  // 白底
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // 頂部深色標題區
+  ctx.fillStyle = '#1a1a1a';
+  ctx.fillRect(0, 0, W, 90);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 22px -apple-system, Arial, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('卯時設計有限公司', PAD, 38);
+  ctx.font = '14px -apple-system, Arial, sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.fillText('套量服外借憑證', PAD, 64);
+  ctx.textAlign = 'right';
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.font = '12px monospace';
+  ctx.fillText(data.recordId || '', W - PAD, 55);
+
+  let y = 118;
+  ctx.textAlign = 'left';
+
+  // 衣服資訊區
+  ctx.fillStyle = '#f5f5f3';
+  ctx.roundRect(PAD, y-22, W-PAD*2, 68, 10);
+  ctx.fill();
+  ctx.fillStyle = '#1a1a1a';
+  ctx.font = 'bold 18px -apple-system, Arial, sans-serif';
+  ctx.fillText(data.itemId || '', PAD+16, y+4);
+  ctx.fillStyle = '#6b6b68';
+  ctx.font = '13px -apple-system, Arial, sans-serif';
+  ctx.fillText(data.itemName || '', PAD+16, y+26);
+
+  y += 70;
+
+  // 分隔線
+  function drawRow(label, value){
+    ctx.fillStyle = '#e8e8e4';
+    ctx.fillRect(PAD, y, W-PAD*2, 0.5);
+    y += 14;
+    ctx.fillStyle = '#6b6b68';
+    ctx.font = '13px -apple-system, Arial, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(label, PAD+8, y+4);
+    ctx.fillStyle = '#1a1a1a';
+    ctx.font = 'bold 13px -apple-system, Arial, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(value || '—', W-PAD-8, y+4);
+    y += 32;
+  }
+
+  drawRow('借出業務', data.staff);
+  drawRow('借用客戶', data.client);
+  drawRow('聯絡電話', data.phone);
+  drawRow('借出日期', data.borrowDate);
+  drawRow('預計歸還', data.dueDate);
+
+  y += 10;
+
+  // 簽名區
+  ctx.fillStyle = '#f5f5f3';
+  ctx.roundRect(PAD, y, W-PAD*2, sigH+40, 10);
+  ctx.fill();
+  ctx.fillStyle = '#6b6b68';
+  ctx.font = '12px -apple-system, Arial, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('借用人簽名', PAD+16, y+20);
+
+  const sigY = y + 30;
+  const sigW = W - PAD*2 - 32;
+
+  // 嘗試載入簽名
+  let sigLoaded = false;
+  if(data.sigDataUrl){
+    // 直接用 canvas 資料
+    try{
+      const img = new Image();
+      img.src = data.sigDataUrl;
+      await new Promise(r=>{ img.onload=r; img.onerror=r; });
+      ctx.drawImage(img, PAD+16, sigY, sigW, sigH);
+      sigLoaded = true;
+    }catch(e){}
+  } else if(data.sigUrl){
+    // 從 Drive 載入
+    try{
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.src = data.sigUrl;
+      await new Promise((res,rej)=>{ img.onload=res; img.onerror=rej; setTimeout(rej,5000); });
+      ctx.drawImage(img, PAD+16, sigY, sigW, sigH);
+      sigLoaded = true;
+    }catch(e){}
+  }
+
+  if(!sigLoaded){
+    ctx.fillStyle = '#aaa';
+    ctx.font = '13px -apple-system, Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('簽名已存於系統', W/2, sigY + sigH/2);
+    ctx.textAlign = 'left';
+  }
+
+  y = sigY + sigH + 50;
+
+  // 底部資訊
+  ctx.fillStyle = '#e8e8e4';
+  ctx.fillRect(PAD, y, W-PAD*2, 0.5);
+  y += 16;
+  ctx.fillStyle = '#aaa';
+  ctx.font = '11px monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText('憑證編號：'+(data.recordId||''), PAD+8, y);
+  ctx.textAlign = 'right';
+  ctx.fillText('產生時間：'+new Date().toLocaleString('zh-TW'), W-PAD-8, y);
+
+  // 調整 canvas 高度
+  canvas.height = y + 30;
+  // 重新繪製（因為改了高度）
+  ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,W,canvas.height);
+  await buildReceiptCanvas(ctx, W, PAD, data, sigH);
+
+  // 下載
+  const link = document.createElement('a');
+  link.download = '外借憑證_'+( data.itemId||'')+'_'+(data.borrowDate||'')+'.jpg';
+  link.href = canvas.toDataURL('image/jpeg', 0.92);
+  link.click();
+}
+
+async function buildReceiptCanvas(ctx, W, PAD, data, sigH){
+  // 重新繪製所有內容（高度修正後）
+  ctx.fillStyle='#1a1a1a'; ctx.fillRect(0,0,W,90);
+  ctx.fillStyle='#ffffff'; ctx.font='bold 22px -apple-system,Arial,sans-serif'; ctx.textAlign='left';
+  ctx.fillText('卯時設計有限公司',PAD,38);
+  ctx.font='14px -apple-system,Arial,sans-serif'; ctx.fillStyle='rgba(255,255,255,0.7)';
+  ctx.fillText('套量服外借憑證',PAD,64);
+  ctx.textAlign='right'; ctx.fillStyle='rgba(255,255,255,0.5)'; ctx.font='12px monospace';
+  ctx.fillText(data.recordId||'',W-PAD,55);
+
+  let y=118; ctx.textAlign='left';
+  ctx.fillStyle='#f5f5f3';
+  if(ctx.roundRect){ ctx.roundRect(PAD,y-22,W-PAD*2,68,10); ctx.fill(); }
+  ctx.fillStyle='#1a1a1a'; ctx.font='bold 18px -apple-system,Arial,sans-serif';
+  ctx.fillText(data.itemId||'',PAD+16,y+4);
+  ctx.fillStyle='#6b6b68'; ctx.font='13px -apple-system,Arial,sans-serif';
+  ctx.fillText(data.itemName||'',PAD+16,y+26);
+  y+=70;
+
+  function row(label,value){
+    ctx.fillStyle='#e8e8e4'; ctx.fillRect(PAD,y,W-PAD*2,0.5); y+=14;
+    ctx.fillStyle='#6b6b68'; ctx.font='13px -apple-system,Arial,sans-serif'; ctx.textAlign='left';
+    ctx.fillText(label,PAD+8,y+4);
+    ctx.fillStyle='#1a1a1a'; ctx.font='bold 13px -apple-system,Arial,sans-serif'; ctx.textAlign='right';
+    ctx.fillText(value||'—',W-PAD-8,y+4); y+=32;
+  }
+  row('借出業務',data.staff); row('借用客戶',data.client); row('聯絡電話',data.phone);
+  row('借出日期',data.borrowDate); row('預計歸還',data.dueDate);
+  y+=10;
+
+  ctx.fillStyle='#f5f5f3';
+  if(ctx.roundRect){ ctx.roundRect(PAD,y,W-PAD*2,sigH+40,10); ctx.fill(); }
+  ctx.fillStyle='#6b6b68'; ctx.font='12px -apple-system,Arial,sans-serif'; ctx.textAlign='left';
+  ctx.fillText('借用人簽名',PAD+16,y+20);
+  const sigY=y+30; const sigW=W-PAD*2-32;
+
+  let sigLoaded=false;
+  if(data.sigDataUrl){
+    try{ const img=new Image(); img.src=data.sigDataUrl;
+      await new Promise(r=>{img.onload=r;img.onerror=r;});
+      ctx.drawImage(img,PAD+16,sigY,sigW,sigH); sigLoaded=true; }catch(e){}
+  } else if(data.sigUrl){
+    try{ const img=new Image(); img.crossOrigin='anonymous'; img.src=data.sigUrl;
+      await new Promise((res,rej)=>{img.onload=res;img.onerror=rej;setTimeout(rej,5000);});
+      ctx.drawImage(img,PAD+16,sigY,sigW,sigH); sigLoaded=true; }catch(e){}
+  }
+  if(!sigLoaded){
+    ctx.fillStyle='#aaa'; ctx.font='13px -apple-system,Arial,sans-serif'; ctx.textAlign='center';
+    ctx.fillText('簽名已存於系統',W/2,sigY+sigH/2); ctx.textAlign='left';
+  }
+  y=sigY+sigH+50;
+  ctx.fillStyle='#e8e8e4'; ctx.fillRect(PAD,y,W-PAD*2,0.5); y+=16;
+  ctx.fillStyle='#aaa'; ctx.font='11px monospace'; ctx.textAlign='left';
+  ctx.fillText('憑證編號：'+(data.recordId||''),PAD+8,y);
+  ctx.textAlign='right'; ctx.fillText('產生時間：'+new Date().toLocaleString('zh-TW'),W-PAD-8,y);
+}
+
+function closeModal(){document.getElementById('modal').classList.remove('show');}
   const item=findItem(modalCurrentId);
   if(!item)return;
   closeModal();
@@ -1123,6 +1422,19 @@ async function uploadSigPost(recordId,sigData){
 function findItem(id){return inventory.find(i=>i.id.toUpperCase()===id.toUpperCase());}
 function today(){return new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit'}).replace(/\//g,'-');}
 
+function updateResDueMin(){
+  const borrowDate = document.getElementById('res-borrow-date').value;
+  const dueEl = document.getElementById('res-due');
+  if(borrowDate){
+    const d = new Date(borrowDate);
+    d.setDate(d.getDate()+1);
+    const minDue = d.toISOString().split('T')[0];
+    dueEl.min = minDue;
+    // 如果已選的歸還日比借出日早，自動清空讓使用者重選
+    if(dueEl.value && dueEl.value <= borrowDate) dueEl.value = '';
+  }
+}
+
 function tomorrow(){
   const d = new Date();
   d.setDate(d.getDate()+1);
@@ -1143,11 +1455,12 @@ document.getElementById('d-cversion').textContent='…';
 document.getElementById('d-hdt').textContent='…';
 document.getElementById('d-res').textContent='…';
 document.getElementById('d-out').textContent='…';
+document.getElementById('d-overdue').textContent='…';
 setDateMins();
 loadInventory();
 
 // ==================== UPDATE ====================
-const CURRENT_VERSION = 'v22';
+const CURRENT_VERSION = 'v25';
 let pendingWorker = null;
 
 function showUpdateBanner(){
