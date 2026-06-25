@@ -244,7 +244,7 @@ textarea{resize:none;line-height:1.5}
     </div>
     <div>
       <div class="brand-name">卯時設計有限公司</div>
-      <div class="brand-sub">套量服外借管理系統 v28</div>
+      <div class="brand-sub">套量服外借管理系統 v29</div>
     </div>
     <button class="refresh-btn" id="refresh-btn" onclick="doRefresh()" title="刷新庫存">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
@@ -1377,24 +1377,41 @@ async function modalCancelReserve(){
 
 // ==================== SIGNATURE ====================
 function initSig(id){
-  const c=document.getElementById(id);if(!c||c._ready)return;c._ready=true;
-  const ctx=c.getContext('2d');let drawing=false,lx=0,ly=0;
-  function pos(e){const r=c.getBoundingClientRect(),s=e.touches?e.touches[0]:e;return{x:(s.clientX-r.left)*(c.width/r.width),y:(s.clientY-r.top)*(c.height/r.height)};}
-  function draw(e){if(!drawing)return;const p=pos(e);ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(p.x,p.y);ctx.strokeStyle='#1a1a1a';ctx.lineWidth=2.5;ctx.lineCap='round';ctx.lineJoin='round';ctx.stroke();lx=p.x;ly=p.y;}
-  c.addEventListener('mousedown',e=>{drawing=true;const p=pos(e);lx=p.x;ly=p.y;});
-  c.addEventListener('mousemove',draw);
-  c.addEventListener('mouseup',()=>drawing=false);
-  c.addEventListener('mouseleave',()=>drawing=false);
-  c.addEventListener('touchstart',e=>{e.preventDefault();drawing=true;const p=pos(e);lx=p.x;ly=p.y;},{passive:false});
-  c.addEventListener('touchmove',e=>{e.preventDefault();draw(e);},{passive:false});
-  c.addEventListener('touchend',e=>{e.preventDefault();drawing=false;},{passive:false});
+  const c=document.getElementById(id);if(!c)return;
+  // 移除舊的事件（如果有的話）
+  const newC=c.cloneNode(true);
+  c.parentNode.replaceChild(newC,c);
+  const canvas=document.getElementById(id);
+  const ctx=canvas.getContext('2d');
+  let drawing=false,lx=0,ly=0;
+
+  function pos(e){
+    const r=canvas.getBoundingClientRect();
+    const s=e.touches?e.touches[0]:e;
+    // 用 offsetX/offsetY 更精準，fallback 到 clientX/Y
+    return {
+      x:(s.clientX-r.left)*(canvas.width/r.width),
+      y:(s.clientY-r.top)*(canvas.height/r.height)
+    };
+  }
+  function draw(e){
+    if(!drawing)return;
+    const p=pos(e);
+    ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(p.x,p.y);
+    ctx.strokeStyle='#1a1a1a';ctx.lineWidth=2.5;ctx.lineCap='round';ctx.lineJoin='round';ctx.stroke();
+    lx=p.x;ly=p.y;
+  }
+  canvas.addEventListener('mousedown',e=>{drawing=true;const p=pos(e);lx=p.x;ly=p.y;});
+  canvas.addEventListener('mousemove',draw);
+  canvas.addEventListener('mouseup',()=>drawing=false);
+  canvas.addEventListener('mouseleave',()=>drawing=false);
+  canvas.addEventListener('touchstart',e=>{e.preventDefault();drawing=true;const p=pos(e);lx=p.x;ly=p.y;},{passive:false});
+  canvas.addEventListener('touchmove',e=>{e.preventDefault();draw(e);},{passive:false});
+  canvas.addEventListener('touchend',e=>{e.preventDefault();drawing=false;},{passive:false});
 }
 function clearCanvas(id){
   const c=document.getElementById(id);
-  if(c){
-    c.getContext('2d').clearRect(0,0,c.width,c.height);
-    c._ready=false; // 重置，讓 initSig 可以重新綁定
-  }
+  if(c) c.getContext('2d').clearRect(0,0,c.width,c.height);
 }
 function clearSig(id){clearCanvas(id);}
 function hasSig(id){const c=document.getElementById(id);if(!c)return false;const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;for(let i=3;i<d.length;i+=4){if(d[i]>10)return true;}return false;}
@@ -1469,7 +1486,7 @@ setDateMins();
 loadInventory();
 
 // ==================== UPDATE ====================
-const CURRENT_VERSION = 'v28';
+const CURRENT_VERSION = 'v29';
 let pendingWorker = null;
 
 function showUpdateBanner(){
