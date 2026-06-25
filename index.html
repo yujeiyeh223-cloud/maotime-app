@@ -46,7 +46,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-se
 .last-update{font-size:10px;color:var(--th);text-align:right;padding:2px 0 6px}
 
 /* PAGES */
-.page{display:none;flex:1;overflow-y:auto;padding:14px 20px;flex-direction:column;gap:12px;padding-bottom:calc(env(safe-area-inset-bottom,0px)+28px);-webkit-overflow-scrolling:touch}
+.page{display:none;flex:1;overflow-y:auto;padding:14px 20px;flex-direction:column;gap:12px;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 48px);-webkit-overflow-scrolling:touch}
 .page.active{display:flex}
 
 /* HOME */
@@ -156,7 +156,7 @@ textarea{resize:none;line-height:1.5}
 .sig-hint{padding:7px 16px 11px;font-size:11px;color:var(--th)}
 
 /* SUBMIT */
-.submit-btn{display:none;border:none;border-radius:14px;padding:16px;font-size:16px;font-weight:700;cursor:pointer;width:100%;font-family:inherit;transition:transform 0.12s,opacity 0.12s;flex-shrink:0;letter-spacing:0.02em;margin-bottom:calc(env(safe-area-inset-bottom,0px) + 4px)}
+.submit-btn{display:none;border:none;border-radius:14px;padding:16px;font-size:16px;font-weight:700;cursor:pointer;width:100%;font-family:inherit;transition:transform 0.12s,opacity 0.12s;flex-shrink:0;letter-spacing:0.02em}
 .submit-btn.show{display:block}
 .submit-btn:active{transform:scale(0.975);opacity:0.9}
 .submit-btn:disabled{opacity:0.5}
@@ -220,7 +220,7 @@ textarea{resize:none;line-height:1.5}
     </div>
     <div>
       <div class="brand-name">卯時設計有限公司</div>
-      <div class="brand-sub">套量服外借管理系統 v16</div>
+      <div class="brand-sub">套量服外借管理系統 v17</div>
     </div>
     <button class="refresh-btn" id="refresh-btn" onclick="doRefresh()" title="刷新庫存">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
