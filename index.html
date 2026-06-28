@@ -244,7 +244,7 @@ textarea{resize:none;line-height:1.5}
     </div>
     <div>
       <div class="brand-name">卯時設計有限公司</div>
-      <div class="brand-sub">套量服外借管理系統 v32</div>
+      <div class="brand-sub">套量服外借管理系統 v34</div>
     </div>
     <button class="refresh-btn" id="refresh-btn" onclick="doRefresh()" title="刷新庫存">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
@@ -633,24 +633,33 @@ function stopAll() {
   if(borrowScanner) { try{borrowScanner.stop();}catch(e){} borrowScanner=null; }
   if(returnScanner) { try{returnScanner.stop();}catch(e){} returnScanner=null; }
   if(reserveScanner){ try{reserveScanner.stop();}catch(e){} reserveScanner=null; }
+  // 保底：強制停止頁面上所有 video 的媒體串流
+  document.querySelectorAll('video').forEach(v=>{
+    try{
+      if(v.srcObject){
+        v.srcObject.getTracks().forEach(t=>t.stop());
+        v.srcObject=null;
+      }
+    }catch(e){}
+  });
 }
 
-function startScanner(divId, onResult) {
+function startScanner(divId, onResult, onScannerReady) {
   const s = new Html5Qrcode(divId);
-  const vc = {
-    facingMode: { exact: 'environment' },
-    width: { ideal: 1280 },
-    height: { ideal: 720 }
-  };
-  s.start(vc,
-    {fps:15, qrbox:function(w,h){const m=Math.min(w,h)*0.7;return{width:m,height:m};}, aspectRatio:1.0},
-    text=>{ onResult(text.trim()); s.stop(); }, ()=>{}
+  s.start(
+    { facingMode: { exact: 'environment' } },
+    { fps:15, qrbox:function(w,h){const m=Math.min(w,h)*0.7;return{width:m,height:m};}, aspectRatio:1.0 },
+    text=>{ onResult(text.trim()); s.stop(); },
+    ()=>{}
   ).catch(()=>{
     // exact 失敗時 fallback 到一般模式
     const s2 = new Html5Qrcode(divId);
-    s2.start({facingMode:'environment'},
-      {fps:15, qrbox:function(w,h){const m=Math.min(w,h)*0.7;return{width:m,height:m};}, aspectRatio:1.0},
-      text=>{ onResult(text.trim()); s2.stop(); }, ()=>{}
+    if(onScannerReady) onScannerReady(s2); // 更新全域變數
+    s2.start(
+      { facingMode: 'environment' },
+      { fps:15, qrbox:function(w,h){const m=Math.min(w,h)*0.7;return{width:m,height:m};}, aspectRatio:1.0 },
+      text=>{ onResult(text.trim()); s2.stop(); },
+      ()=>{}
     ).catch(()=>{
       document.getElementById(divId).innerHTML='<div class="no-cam">⚠️ 無法存取相機<br>請切換至「手動選擇」模式</div>';
     });
@@ -745,7 +754,7 @@ function setBorrowMode(mode){
   document.getElementById('b-reader-wrap').style.display=mode==='scan'?'block':'none';
   document.getElementById('b-manual-area').classList.toggle('show',mode==='manual');
   if(mode==='scan'){
-    if(!borrowScanner){document.getElementById('b-reader').innerHTML='';borrowScanner=startScanner('b-reader',onBorrow);}
+    if(!borrowScanner){document.getElementById('b-reader').innerHTML='';borrowScanner=startScanner('b-reader',onBorrow,s=>borrowScanner=s);}
   } else {
     if(borrowScanner){try{borrowScanner.stop();}catch(e){}borrowScanner=null;}
   }
@@ -834,7 +843,7 @@ function setReturnMode(mode){
   document.getElementById('r-reader-wrap').style.display=mode==='scan'?'block':'none';
   document.getElementById('r-manual-area').classList.toggle('show',mode==='manual');
   if(mode==='scan'){
-    if(!returnScanner){document.getElementById('r-reader').innerHTML='';returnScanner=startScanner('r-reader',onReturn);}
+    if(!returnScanner){document.getElementById('r-reader').innerHTML='';returnScanner=startScanner('r-reader',onReturn,s=>returnScanner=s);}
   } else {
     if(returnScanner){try{returnScanner.stop();}catch(e){}returnScanner=null;}
   }
@@ -934,7 +943,7 @@ function setReserveMode(mode){
   document.getElementById('res-reader-wrap').style.display=mode==='scan'?'block':'none';
   document.getElementById('res-manual-area').classList.toggle('show',mode==='manual');
   if(mode==='scan'){
-    if(!reserveScanner){document.getElementById('res-reader').innerHTML='';reserveScanner=startScanner('res-reader',onReserve);}
+    if(!reserveScanner){document.getElementById('res-reader').innerHTML='';reserveScanner=startScanner('res-reader',onReserve,s=>reserveScanner=s);}
   } else {
     if(reserveScanner){try{reserveScanner.stop();}catch(e){}reserveScanner=null;}
   }
@@ -1142,197 +1151,99 @@ async function modalGenerateReceipt(){
 
 async function buildAndDownloadReceipt(data){
   const canvas = document.createElement('canvas');
-  const W = 750, PAD = 40;
+  const W = 540, PAD = 36;
+  const sigH = 140;
+  // 手機直式比例 9:16
   canvas.width = W;
-
-  // 先計算高度（需要知道簽名高度）
-  const sigH = 120;
-  canvas.height = 620 + sigH;
+  canvas.height = Math.round(W * 16 / 9);
   const ctx = canvas.getContext('2d');
 
-  // 白底
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // 頂部深色標題區
-  ctx.fillStyle = '#1a1a1a';
-  ctx.fillRect(0, 0, W, 90);
-  ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 22px -apple-system, Arial, sans-serif';
-  ctx.textAlign = 'left';
-  ctx.fillText('卯時設計有限公司', PAD, 38);
-  ctx.font = '14px -apple-system, Arial, sans-serif';
-  ctx.fillStyle = 'rgba(255,255,255,0.7)';
-  ctx.fillText('套量服外借憑證', PAD, 64);
-  ctx.textAlign = 'right';
-  ctx.fillStyle = 'rgba(255,255,255,0.5)';
-  ctx.font = '12px monospace';
-  ctx.fillText(data.recordId || '', W - PAD, 55);
-
-  let y = 118;
-  ctx.textAlign = 'left';
-
-  // 衣服資訊區
-  ctx.fillStyle = '#f5f5f3';
-  ctx.roundRect(PAD, y-22, W-PAD*2, 68, 10);
-  ctx.fill();
-  ctx.fillStyle = '#1a1a1a';
-  ctx.font = 'bold 18px -apple-system, Arial, sans-serif';
-  ctx.fillText(data.itemId || '', PAD+16, y+4);
-  ctx.fillStyle = '#6b6b68';
-  ctx.font = '13px -apple-system, Arial, sans-serif';
-  ctx.fillText(data.itemName || '', PAD+16, y+26);
-
-  y += 70;
-
-  // 分隔線
-  function drawRow(label, value){
-    ctx.fillStyle = '#e8e8e4';
-    ctx.fillRect(PAD, y, W-PAD*2, 0.5);
-    y += 14;
-    ctx.fillStyle = '#6b6b68';
-    ctx.font = '13px -apple-system, Arial, sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText(label, PAD+8, y+4);
-    ctx.fillStyle = '#1a1a1a';
-    ctx.font = 'bold 13px -apple-system, Arial, sans-serif';
-    ctx.textAlign = 'right';
-    ctx.fillText(value || '—', W-PAD-8, y+4);
-    y += 32;
-  }
-
-  drawRow('借出業務', data.staff);
-  drawRow('借用客戶', data.client);
-  drawRow('聯絡電話', data.phone);
-  drawRow('借出日期', data.borrowDate);
-  drawRow('預計歸還', data.dueDate);
-
-  y += 10;
-
-  // 簽名區
-  ctx.fillStyle = '#f5f5f3';
-  ctx.roundRect(PAD, y, W-PAD*2, sigH+40, 10);
-  ctx.fill();
-  ctx.fillStyle = '#6b6b68';
-  ctx.font = '12px -apple-system, Arial, sans-serif';
-  ctx.textAlign = 'left';
-  ctx.fillText('借用人簽名', PAD+16, y+20);
-
-  const sigY = y + 30;
-  const sigW = W - PAD*2 - 32;
-
-  // 嘗試載入簽名
-  let sigLoaded = false;
-  if(data.sigDataUrl){
-    // 直接用 canvas 資料
-    try{
-      const img = new Image();
-      img.src = data.sigDataUrl;
-      await new Promise(r=>{ img.onload=r; img.onerror=r; });
-      ctx.drawImage(img, PAD+16, sigY, sigW, sigH);
-      sigLoaded = true;
-    }catch(e){}
-  } else if(data.sigUrl){
-    // 從 Drive 載入
-    try{
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.src = data.sigUrl;
-      await new Promise((res,rej)=>{ img.onload=res; img.onerror=rej; setTimeout(rej,5000); });
-      ctx.drawImage(img, PAD+16, sigY, sigW, sigH);
-      sigLoaded = true;
-    }catch(e){}
-  }
-
-  if(!sigLoaded){
-    ctx.fillStyle = '#aaa';
-    ctx.font = '13px -apple-system, Arial, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('簽名已存於系統', W/2, sigY + sigH/2);
-    ctx.textAlign = 'left';
-  }
-
-  y = sigY + sigH + 50;
-
-  // 底部資訊
-  ctx.fillStyle = '#e8e8e4';
-  ctx.fillRect(PAD, y, W-PAD*2, 0.5);
-  y += 16;
-  ctx.fillStyle = '#aaa';
-  ctx.font = '11px monospace';
-  ctx.textAlign = 'left';
-  ctx.fillText('憑證編號：'+(data.recordId||''), PAD+8, y);
-  ctx.textAlign = 'right';
-  ctx.fillText('產生時間：'+new Date().toLocaleString('zh-TW'), W-PAD-8, y);
-
-  // 調整 canvas 高度
-  canvas.height = y + 30;
-  // 重新繪製（因為改了高度）
-  ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,W,canvas.height);
   await buildReceiptCanvas(ctx, W, PAD, data, sigH);
 
-  // 下載
   const link = document.createElement('a');
-  link.download = '外借憑證_'+( data.itemId||'')+'_'+(data.borrowDate||'')+'.jpg';
+  link.download = '外借憑證_'+(data.itemName||'')+'_'+(data.borrowDate||'')+'.jpg';
   link.href = canvas.toDataURL('image/jpeg', 0.92);
   link.click();
 }
 
 async function buildReceiptCanvas(ctx, W, PAD, data, sigH){
-  // 重新繪製所有內容（高度修正後）
-  ctx.fillStyle='#1a1a1a'; ctx.fillRect(0,0,W,90);
-  ctx.fillStyle='#ffffff'; ctx.font='bold 22px -apple-system,Arial,sans-serif'; ctx.textAlign='left';
-  ctx.fillText('卯時設計有限公司',PAD,38);
-  ctx.font='14px -apple-system,Arial,sans-serif'; ctx.fillStyle='rgba(255,255,255,0.7)';
-  ctx.fillText('套量服外借憑證',PAD,64);
-  ctx.textAlign='right'; ctx.fillStyle='rgba(255,255,255,0.5)'; ctx.font='12px monospace';
-  ctx.fillText(data.recordId||'',W-PAD,55);
+  const H = Math.round(W * 16 / 9);
 
-  let y=118; ctx.textAlign='left';
+  // 白底
+  ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,W,H);
+
+  // 頂部深色標題區
+  const HDR = 80;
+  ctx.fillStyle='#1a1a1a'; ctx.fillRect(0,0,W,HDR);
+  ctx.fillStyle='#ffffff'; ctx.font='bold 20px -apple-system,Arial,sans-serif'; ctx.textAlign='left';
+  ctx.fillText('卯時設計有限公司',PAD,32);
+  ctx.font='13px -apple-system,Arial,sans-serif'; ctx.fillStyle='rgba(255,255,255,0.65)';
+  ctx.fillText('套量服外借憑證',PAD,56);
+  ctx.textAlign='right'; ctx.fillStyle='rgba(255,255,255,0.4)'; ctx.font='11px monospace';
+  ctx.fillText(data.recordId||'',W-PAD,56);
+
+  let y = HDR + 24;
+  ctx.textAlign='left';
+
+  // 衣服名稱區（只顯示名稱，不顯示ID）
   ctx.fillStyle='#f5f5f3';
-  if(ctx.roundRect){ ctx.roundRect(PAD,y-22,W-PAD*2,68,10); ctx.fill(); }
-  ctx.fillStyle='#1a1a1a'; ctx.font='bold 18px -apple-system,Arial,sans-serif';
-  ctx.fillText(data.itemId||'',PAD+16,y+4);
-  ctx.fillStyle='#6b6b68'; ctx.font='13px -apple-system,Arial,sans-serif';
-  ctx.fillText(data.itemName||'',PAD+16,y+26);
-  y+=70;
+  if(ctx.roundRect){ ctx.roundRect(PAD,y,W-PAD*2,52,10); ctx.fill(); }
+  else { ctx.fillRect(PAD,y,W-PAD*2,52); }
+  ctx.fillStyle='#1a1a1a'; ctx.font='bold 17px -apple-system,Arial,sans-serif';
+  ctx.fillText(data.itemName||'',PAD+14,y+32);
+  y += 68;
 
-  function row(label,value){
-    ctx.fillStyle='#e8e8e4'; ctx.fillRect(PAD,y,W-PAD*2,0.5); y+=14;
-    ctx.fillStyle='#6b6b68'; ctx.font='13px -apple-system,Arial,sans-serif'; ctx.textAlign='left';
+  // 每行資訊（label 靠左，value 也靠左）
+  function row(label, value){
+    ctx.fillStyle='#e8e8e4'; ctx.fillRect(PAD,y,W-PAD*2,0.5); y+=12;
+    ctx.fillStyle='#888'; ctx.font='12px -apple-system,Arial,sans-serif'; ctx.textAlign='left';
     ctx.fillText(label,PAD+8,y+4);
-    ctx.fillStyle='#1a1a1a'; ctx.font='bold 13px -apple-system,Arial,sans-serif'; ctx.textAlign='right';
-    ctx.fillText(value||'—',W-PAD-8,y+4); y+=32;
+    ctx.fillStyle='#1a1a1a'; ctx.font='bold 13px -apple-system,Arial,sans-serif';
+    ctx.fillText(value||'—',PAD+8,y+22);
+    y+=42;
   }
-  row('借出業務',data.staff); row('借用客戶',data.client); row('聯絡電話',data.phone);
-  row('借出日期',data.borrowDate); row('預計歸還',data.dueDate);
-  y+=10;
 
+  row('借出業務',data.staff);
+  row('借用客戶',data.client);
+  row('聯絡電話',data.phone);
+  row('借出日期',data.borrowDate);
+  row('預計歸還',data.dueDate);
+  y+=6;
+
+  // 簽名區
+  const sigAreaH = sigH + 44;
   ctx.fillStyle='#f5f5f3';
-  if(ctx.roundRect){ ctx.roundRect(PAD,y,W-PAD*2,sigH+40,10); ctx.fill(); }
-  ctx.fillStyle='#6b6b68'; ctx.font='12px -apple-system,Arial,sans-serif'; ctx.textAlign='left';
-  ctx.fillText('借用人簽名',PAD+16,y+20);
-  const sigY=y+30; const sigW=W-PAD*2-32;
+  if(ctx.roundRect){ ctx.roundRect(PAD,y,W-PAD*2,sigAreaH,10); ctx.fill(); }
+  else { ctx.fillRect(PAD,y,W-PAD*2,sigAreaH); }
+  ctx.fillStyle='#888'; ctx.font='12px -apple-system,Arial,sans-serif'; ctx.textAlign='left';
+  ctx.fillText('借用人簽名',PAD+14,y+18);
+  const sigY=y+28; const sigW=W-PAD*2-28;
 
   let sigLoaded=false;
   if(data.sigDataUrl){
     try{ const img=new Image(); img.src=data.sigDataUrl;
       await new Promise(r=>{img.onload=r;img.onerror=r;});
-      ctx.drawImage(img,PAD+16,sigY,sigW,sigH); sigLoaded=true; }catch(e){}
+      ctx.drawImage(img,PAD+14,sigY,sigW,sigH); sigLoaded=true; }catch(e){}
   } else if(data.sigUrl){
     try{ const img=new Image(); img.crossOrigin='anonymous'; img.src=data.sigUrl;
       await new Promise((res,rej)=>{img.onload=res;img.onerror=rej;setTimeout(rej,5000);});
-      ctx.drawImage(img,PAD+16,sigY,sigW,sigH); sigLoaded=true; }catch(e){}
+      ctx.drawImage(img,PAD+14,sigY,sigW,sigH); sigLoaded=true; }catch(e){}
   }
   if(!sigLoaded){
-    ctx.fillStyle='#aaa'; ctx.font='13px -apple-system,Arial,sans-serif'; ctx.textAlign='center';
+    ctx.fillStyle='#bbb'; ctx.font='13px -apple-system,Arial,sans-serif'; ctx.textAlign='center';
     ctx.fillText('簽名已存於系統',W/2,sigY+sigH/2); ctx.textAlign='left';
   }
-  y=sigY+sigH+50;
-  ctx.fillStyle='#e8e8e4'; ctx.fillRect(PAD,y,W-PAD*2,0.5); y+=16;
-  ctx.fillStyle='#aaa'; ctx.font='11px monospace'; ctx.textAlign='left';
+  y = sigY+sigH+20;
+
+  // 底部資訊
+  ctx.fillStyle='#e8e8e4'; ctx.fillRect(PAD,y,W-PAD*2,0.5); y+=14;
+  ctx.fillStyle='#bbb'; ctx.font='10px monospace'; ctx.textAlign='left';
   ctx.fillText('憑證編號：'+(data.recordId||''),PAD+8,y);
-  ctx.textAlign='right'; ctx.fillText('產生時間：'+new Date().toLocaleString('zh-TW'),W-PAD-8,y);
+  ctx.textAlign='right';
+  ctx.fillText('產生時間：'+new Date().toLocaleString('zh-TW'),W-PAD-8,y);
 }
 
 function closeModal(){document.getElementById('modal').classList.remove('show');}
@@ -1488,7 +1399,7 @@ loadInventory();
 ['b-sig','r-sig'].forEach(id=>initSig(id));
 
 // ==================== UPDATE ====================
-const CURRENT_VERSION = 'v32';
+const CURRENT_VERSION = 'v34';
 let pendingWorker = null;
 
 function showUpdateBanner(){
