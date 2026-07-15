@@ -244,7 +244,7 @@ textarea{resize:none;line-height:1.5}
     </div>
     <div>
       <div class="brand-name">卯時設計有限公司</div>
-      <div class="brand-sub">套量服外借管理系統 v34</div>
+      <div class="brand-sub">套量服外借管理系統 v35</div>
     </div>
     <button class="refresh-btn" id="refresh-btn" onclick="doRefresh()" title="刷新庫存">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
@@ -409,7 +409,7 @@ textarea{resize:none;line-height:1.5}
       <div class="prev-inner">
         <div class="prev-ico green"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.38 3.46L16 2a4 4 0 01-8 0L3.62 3.46a2 2 0 00-1.34 2.23l.58 3.57a1 1 0 00.99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 002-2V10h2.15a1 1 0 00.99-.84l.58-3.57a2 2 0 00-1.34-2.23z"/></svg></div>
         <div><div class="prev-id" id="r-item-id">—</div><div class="prev-meta" id="r-item-meta">—</div></div>
-        <span class="chip chip-out">外借中</span>
+        <span class="chip chip-out" id="r-item-chip">外借中</span>
       </div>
     </div>
   </div>
@@ -522,6 +522,7 @@ textarea{resize:none;line-height:1.5}
     <div class="modal-name" id="m-name">—</div>
     <div id="m-rows"></div>
     <button class="modal-action blue" id="m-action-btn" style="display:none" onclick="modalToBorrow()">📋 正式外借</button>
+    <button class="modal-action" id="m-return-btn" style="display:none;background:#1B8A5A;color:#fff" onclick="modalToReturn()">📦 確認歸還</button>
     <button class="modal-action" id="m-receipt-btn" style="display:none;background:#1a1a1a;color:#fff" onclick="modalGenerateReceipt()">📄 產生外借憑證</button>
     <button class="modal-action" id="m-cancel-btn" style="display:none;background:#FCEBEB;color:#A32D2D;margin-top:8px" onclick="modalCancelReserve()">✕ 取消預約</button>
     <button class="modal-close" onclick="closeModal()">關閉</button>
@@ -706,7 +707,7 @@ function buildNumGrid(gridId, confirmBtnId, typeKey, count, filterFn) {
     if(item){
       if(!filterFn(item)){
         btn.classList.add('out');
-        const statusMap={out:'外借',res:'預約'};
+        const statusMap={'out':'外借','res':'預約','out-reserved':'外借（已預約）','overdue':'逾期外借','in':'在庫'};
         btn.title = statusMap[item.status]||'不可用';
         btn.onclick=()=>alert(id+' 目前'+btn.title+'中，無法操作');
         grid.appendChild(btn); continue;
@@ -820,21 +821,31 @@ async function submitBorrow(){
 function resetBorrow(){initBorrow();goHome();}
 
 // ==================== RETURN ====================
-function initReturn(){
+function initReturn(fromModal){
   scannedRId=null;selectedRType='';selectedRNum='';
   ['r-preview','r-form','r-sig-card'].forEach(id=>document.getElementById(id).classList.remove('show'));
   document.getElementById('r-submit').classList.remove('show');
   document.getElementById('r-success').classList.remove('show');
-  document.getElementById('r-scan-card').style.display='block';
-  document.querySelector('#page-return .scan-top').style.display='';
-  document.querySelector('#page-return .scan-toggle').style.display='';
-  document.getElementById('r-reader-wrap').style.display='block';
-  document.getElementById('r-manual-area').classList.remove('show');
   clearCanvas('r-sig');
   ['r-handler','r-note'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  buildTypeGrid('r-type-grid','r-num-section','r-num-grid','r-confirm-manual',
-    i=>i.status==='out'||i.status==='res', k=>selectedRType=k);
-  setReturnMode('scan');
+
+  if(fromModal){
+    // 從庫存 Modal 進入：不啟動相機，掃描區塊由 onReturn 的 hideScanCard 隱藏
+    // 保留 r-scan-card 本身，讓衣服預覽（r-preview）仍可顯示
+    document.getElementById('r-scan-card').style.display='block';
+    document.getElementById('r-reader-wrap').style.display='none';
+    document.getElementById('r-manual-area').classList.remove('show');
+  } else {
+    // 一般歸還：顯示掃描區
+    document.getElementById('r-scan-card').style.display='block';
+    document.querySelector('#page-return .scan-top').style.display='';
+    document.querySelector('#page-return .scan-toggle').style.display='';
+    document.getElementById('r-reader-wrap').style.display='block';
+    document.getElementById('r-manual-area').classList.remove('show');
+    buildTypeGrid('r-type-grid','r-num-section','r-num-grid','r-confirm-manual',
+      i=>i.status==='out'||i.status==='out-reserved'||i.status==='overdue', k=>selectedRType=k);
+    setReturnMode('scan');
+  }
 }
 
 function setReturnMode(mode){
@@ -859,9 +870,12 @@ function onReturn(id){
   const item=findItem(id);
   if(!item){alert('找不到此服裝 ID：'+id);return;}
   if(item.status==='in'){alert('此衣服目前在庫中，無需歸還操作');goHome();return;}
+  if(item.status==='res'){alert('此衣服為預約中，尚未借出，無需歸還操作');goHome();return;}
   scannedRId=item.id;
   document.getElementById('r-item-id').textContent=item.id;
   document.getElementById('r-item-meta').textContent=item.name;
+  const chipMap={'out':'外借中','out-reserved':'外借中（已預約）','overdue':'⚠️ 逾期'};
+  document.getElementById('r-item-chip').textContent=chipMap[item.status]||'外借中';
   document.getElementById('r-staff-val').textContent=item.staff||'—';
   document.getElementById('r-client-val').textContent=item.client||'—';
   document.getElementById('r-bdate-val').textContent=item.borrowDate||'—';
@@ -1084,8 +1098,10 @@ function showDetail(id){
   const actionBtn=document.getElementById('m-action-btn');
   const cancelBtn=document.getElementById('m-cancel-btn');
   const receiptBtn=document.getElementById('m-receipt-btn');
+  const returnBtn=document.getElementById('m-return-btn');
   // 預設都隱藏
-  actionBtn.style.display='none'; cancelBtn.style.display='none'; receiptBtn.style.display='none';
+  actionBtn.style.display='none'; cancelBtn.style.display='none'; receiptBtn.style.display='none'; returnBtn.style.display='none';
+  cancelBtn.textContent='✕ 取消預約';
   let rows=[];
   if(item.status==='in'){
     rows=[['目前狀態','在庫中 ✅'],['可借出','是']];
@@ -1094,6 +1110,7 @@ function showDetail(id){
     actionBtn.style.display='block'; cancelBtn.style.display='block';
   } else if(item.status==='out'){
     rows=[['目前狀態','外借中 📤'],['借出業務',item.staff||'—'],['借出客戶',item.client||'—'],['客戶電話',item.phone||'—'],['借出日期',item.borrowDate||'—'],['預計歸還',item.dueDate||'—']];
+    returnBtn.style.display='block';
     receiptBtn.style.display='block';
   } else if(item.status==='out-reserved'){
     rows=[
@@ -1104,10 +1121,12 @@ function showDetail(id){
       ['下筆預約業務',item.nextStaff||'—'],['下筆預約客戶',item.nextClient||'—'],
       ['預約電話',item.nextPhone||'—'],['預計借出',item.nextBorrowDate||'—'],['預計歸還',item.nextDueDate||'—']
     ];
+    returnBtn.style.display='block';
     cancelBtn.style.display='block'; cancelBtn.textContent='✕ 取消下筆預約';
     receiptBtn.style.display='block';
   } else if(item.status==='overdue'){
     rows=[['目前狀態','⚠️ 逾期未還'],['借出業務',item.staff||'—'],['借出客戶',item.client||'—'],['客戶電話',item.phone||'—'],['借出日期',item.borrowDate||'—'],['預計歸還',item.dueDate||'—']];
+    returnBtn.style.display='block';
     receiptBtn.style.display='block';
   }
 
@@ -1273,6 +1292,18 @@ function modalToBorrow(){
   },100);
 }
 
+function modalToReturn(){
+  const item=findItem(modalCurrentId);
+  if(!item)return;
+  closeModal();
+  stopAll();
+  document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
+  document.getElementById('page-return').classList.add('active');
+  // fromModal=true：不啟動相機
+  initReturn(true);
+  setTimeout(()=>{ onReturn(item.id); },100);
+}
+
 async function modalCancelReserve(){
   const item=findItem(modalCurrentId);
   if(!item)return;
@@ -1399,7 +1430,7 @@ loadInventory();
 ['b-sig','r-sig'].forEach(id=>initSig(id));
 
 // ==================== UPDATE ====================
-const CURRENT_VERSION = 'v34';
+const CURRENT_VERSION = 'v35';
 let pendingWorker = null;
 
 function showUpdateBanner(){
