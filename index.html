@@ -249,7 +249,7 @@ textarea{resize:none;line-height:1.5}
     </div>
     <div>
       <div class="brand-name">卯時設計有限公司</div>
-      <div class="brand-sub">套量服外借管理系統 v36</div>
+      <div class="brand-sub">套量服外借管理系統 v37</div>
     </div>
     <button class="refresh-btn" id="refresh-btn" onclick="doRefresh()" title="刷新庫存">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
@@ -541,8 +541,8 @@ const GAS_URL = 'https://script.google.com/macros/s/AKfycbxFjRU0iMA-XmUFUxp2q8-W
 
 // ==================== ITEM TYPES ====================
 const TYPES = [
-  {key:'TSH-CT20-B', label:'T-Shirt C+T20 B版', count:20},
-  {key:'TSH-CT20-C', label:'T-Shirt C+T20 C版', count:20},
+  {key:'TSH-CT20-B', label:'T-Shirt C+T20 B版', count:29},
+  {key:'TSH-CT20-C', label:'T-Shirt C+T20 C版', count:28},
   {key:'TSH-C16-C',  label:'T-Shirt C16 C版',   count:2},
   {key:'TSH-C16-D',  label:'T-Shirt C16 D版',   count:1},
   {key:'TSH-WS',     label:'T-Shirt 水洗',       count:3},
@@ -1438,7 +1438,7 @@ loadInventory();
 // 這個值必須與 sw.js 的 CACHE_VERSION **完全一致**:checkVersion() 是抓 sw.js
 // 比對兩邊版本號,不一致就顯示「發現新版本」橫幅。只改其中一邊的話,橫幅會
 // 永遠關不掉(按「立即更新」重載後仍然不一致,又立刻跳出來)。
-const CURRENT_VERSION = 'v36';
+const CURRENT_VERSION = 'v37';
 let pendingWorker = null;
 
 function showUpdateBanner(){
