@@ -250,7 +250,7 @@ textarea{resize:none;line-height:1.5}
     </div>
     <div>
       <div class="brand-name">卯時設計有限公司</div>
-      <div class="brand-sub">套量服外借管理系統 v38</div>
+      <div class="brand-sub">套量服外借管理系統 v39</div>
     </div>
     <button class="refresh-btn" id="refresh-btn" onclick="doRefresh()" title="刷新庫存">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
@@ -333,11 +333,11 @@ textarea{resize:none;line-height:1.5}
   <div class="scan-card" id="b-scan-card">
     <div class="scan-top">
       <div class="scan-ico dark"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><line x1="14" y1="14" x2="21" y2="14"/><line x1="21" y1="14" x2="21" y2="21"/><line x1="14" y1="21" x2="21" y2="21"/></svg></div>
-      <div><div class="scan-lbl">掃描服裝條碼</div><div class="scan-desc">對準吊牌或袋上的 QR Code</div></div>
+      <div><div class="scan-lbl">選擇要外借的套量服</div><div class="scan-desc">直接選版型與編號，或切換相機掃描</div></div>
     </div>
     <div class="scan-toggle">
-      <button class="tog-btn active" id="b-scan-tab" onclick="setBorrowMode('scan')">📷 相機掃描</button>
-      <button class="tog-btn" id="b-manual-tab" onclick="setBorrowMode('manual')">☰ 手動選擇</button>
+      <button class="tog-btn active" id="b-manual-tab" onclick="setBorrowMode('manual')">☰ 手動選擇</button>
+      <button class="tog-btn" id="b-scan-tab" onclick="setBorrowMode('scan')">📷 相機掃描</button>
     </div>
     <div class="reader-wrap" id="b-reader-wrap"><div id="b-reader"></div><div class="scan-hint">將條碼對準框內即自動辨識</div></div>
     <div class="manual-area" id="b-manual-area">
@@ -393,11 +393,11 @@ textarea{resize:none;line-height:1.5}
   <div class="scan-card" id="r-scan-card">
     <div class="scan-top">
       <div class="scan-ico green"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><line x1="14" y1="14" x2="21" y2="14"/><line x1="21" y1="14" x2="21" y2="21"/><line x1="14" y1="21" x2="21" y2="21"/></svg></div>
-      <div><div class="scan-lbl">掃描服裝條碼</div><div class="scan-desc">確認要歸還的套量服</div></div>
+      <div><div class="scan-lbl">選擇要歸還的套量服</div><div class="scan-desc">直接選版型與編號，或切換相機掃描</div></div>
     </div>
     <div class="scan-toggle">
-      <button class="tog-btn active" id="r-scan-tab" onclick="setReturnMode('scan')">📷 相機掃描</button>
-      <button class="tog-btn" id="r-manual-tab" onclick="setReturnMode('manual')">☰ 手動選擇</button>
+      <button class="tog-btn active" id="r-manual-tab" onclick="setReturnMode('manual')">☰ 手動選擇</button>
+      <button class="tog-btn" id="r-scan-tab" onclick="setReturnMode('scan')">📷 相機掃描</button>
     </div>
     <div class="reader-wrap" id="r-reader-wrap"><div id="r-reader"></div><div class="scan-hint">將條碼對準框內即自動辨識</div></div>
     <div class="manual-area" id="r-manual-area">
@@ -459,11 +459,11 @@ textarea{resize:none;line-height:1.5}
   <div class="scan-card" id="res-scan-card">
     <div class="scan-top">
       <div class="scan-ico blue"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
-      <div><div class="scan-lbl">選擇套量服</div><div class="scan-desc">掃描或手動選擇要預約的衣服</div></div>
+      <div><div class="scan-lbl">選擇要預約的套量服</div><div class="scan-desc">直接選版型與編號，或切換相機掃描</div></div>
     </div>
     <div class="scan-toggle">
-      <button class="tog-btn active" id="res-scan-tab" onclick="setReserveMode('scan')">📷 相機掃描</button>
-      <button class="tog-btn" id="res-manual-tab" onclick="setReserveMode('manual')">☰ 手動選擇</button>
+      <button class="tog-btn active" id="res-manual-tab" onclick="setReserveMode('manual')">☰ 手動選擇</button>
+      <button class="tog-btn" id="res-scan-tab" onclick="setReserveMode('scan')">📷 相機掃描</button>
     </div>
     <div class="reader-wrap" id="res-reader-wrap"><div id="res-reader"></div><div class="scan-hint">將條碼對準框內即自動辨識</div></div>
     <div class="manual-area" id="res-manual-area">
@@ -685,10 +685,23 @@ function startScanner(divId, onResult, onScannerReady) {
   return s;
 }
 
+// 前綴 → 頁面 id。原本用連續 replace 串接（'b'→'borrow'→'boreturnrow'、
+// 'res'→'reserve'→'returneserve'），只有 'r' 剛好正確，其餘兩頁都會查不到節點而拋錯，
+// 選好衣服後掃描區沒收起來。改成對照表。
+const PAGE_BY_PREFIX = { b:'borrow', r:'return', res:'reserve' };
+
 function hideScanCard(prefix) {
-  document.getElementById(prefix+'-reader-wrap').style.display='none';
-  document.querySelector('#page-'+prefix.replace('res','reserve').replace('b','borrow').replace('r','return')+' .scan-top').style.display='none';
-  document.querySelector('#page-'+prefix.replace('res','reserve').replace('b','borrow').replace('r','return')+' .scan-toggle').style.display='none';
+  const page = document.getElementById('page-'+PAGE_BY_PREFIX[prefix]);
+  if(!page) return;
+  const reader = document.getElementById(prefix+'-reader-wrap');
+  if(reader) reader.style.display='none';
+  const top = page.querySelector('.scan-top');
+  if(top) top.style.display='none';
+  const toggle = page.querySelector('.scan-toggle');
+  if(toggle) toggle.style.display='none';
+  // 手動選擇的版型／編號格子也要收起來，否則選完衣服後還壓在表單上面
+  const manual = document.getElementById(prefix+'-manual-area');
+  if(manual) manual.classList.remove('show');
 }
 
 // ==================== TYPE/NUM GRID ====================
@@ -762,7 +775,7 @@ function initBorrow(fromReserve) {
     document.getElementById('b-manual-area').classList.remove('show');
     buildTypeGrid('b-type-grid','b-num-section','b-num-grid','b-confirm-manual',
       i=>i.status==='in'||i.status==='res', k=>selectedBType=k);
-    setBorrowMode('scan');
+    setBorrowMode('manual');
   }
 }
 
@@ -861,7 +874,7 @@ function initReturn(fromModal){
     document.getElementById('r-manual-area').classList.remove('show');
     buildTypeGrid('r-type-grid','r-num-section','r-num-grid','r-confirm-manual',
       i=>i.status==='out'||i.status==='out-reserved'||i.status==='overdue', k=>selectedRType=k);
-    setReturnMode('scan');
+    setReturnMode('manual');
   }
 }
 
@@ -965,7 +978,7 @@ function initReserve(){
   document.getElementById('res-due').value='';
   buildTypeGrid('res-type-grid','res-num-section','res-num-grid','res-confirm-manual',
     i=>i.status==='in', k=>selectedResType=k);
-  setReserveMode('scan');
+  setReserveMode('manual');
 }
 
 function setReserveMode(mode){
@@ -1000,15 +1013,13 @@ function onReserve(id){
   // 如果是外借中，借出日最小值設為歸還日隔天
   if(item.status==='out'||item.status==='overdue'){
     const borrowEl = document.getElementById('res-borrow-date');
-    if(item.dueDate){
-      const d = new Date(item.dueDate);
-      d.setDate(d.getDate()+1);
-      borrowEl.min = d.toISOString().split('T')[0];
-    }
+    const m = item.dueDate ? addDays(item.dueDate, 1) : '';
+    borrowEl.min = m || today();
     // 顯示提醒
     document.getElementById('res-item-meta').textContent = item.name + '（目前外借中，預約借出日需在 '+item.dueDate+' 之後）';
   } else {
-    document.getElementById('res-borrow-date').min = tomorrow();
+    // 在庫的衣服可以預約當天借出（早上先卡、下午客人來拿）
+    document.getElementById('res-borrow-date').min = today();
   }
 
   document.getElementById('res-preview').classList.add('show');
@@ -1460,27 +1471,31 @@ async function uploadSigPost(recordId,sigData){
 function findItem(id){return inventory.find(i=>i.id.toUpperCase()===id.toUpperCase());}
 function today(){return new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit'}).replace(/\//g,'-');}
 
+// 純日曆加減，不受時區影響（接受 yyyy-mm-dd 或 yyyy/mm/dd）
+function addDays(dateStr, n){
+  const p = String(dateStr).replace(/\//g,'-').split('-');
+  if(p.length!==3 || !p[0]) return '';
+  const d = new Date(Date.UTC(+p[0], +p[1]-1, +p[2]));
+  if(isNaN(d.getTime())) return '';
+  d.setUTCDate(d.getUTCDate()+n);
+  return d.toISOString().split('T')[0];
+}
+
 function updateResDueMin(){
   const borrowDate = document.getElementById('res-borrow-date').value;
   const dueEl = document.getElementById('res-due');
   if(borrowDate){
-    const d = new Date(borrowDate);
-    d.setDate(d.getDate()+1);
-    const minDue = d.toISOString().split('T')[0];
-    dueEl.min = minDue;
+    // 可以當天借當天還，所以歸還日最小值就是借出日
+    dueEl.min = borrowDate;
     // 如果已選的歸還日比借出日早，自動清空讓使用者重選
-    if(dueEl.value && dueEl.value <= borrowDate) dueEl.value = '';
+    if(dueEl.value && dueEl.value < borrowDate) dueEl.value = '';
   }
 }
 
-function tomorrow(){
-  const d = new Date();
-  d.setDate(d.getDate()+1);
-  return d.toISOString().split('T')[0];
-}
-
 function setDateMins(){
-  const t = tomorrow();
+  // 一律用本地日期（today()），不要用 toISOString()——那是 UTC，
+  // 台北凌晨 0~8 點會算成前一天，導致日期下限一整天不一致
+  const t = today();
   ['b-due','res-borrow-date','res-due'].forEach(id=>{
     const el = document.getElementById(id);
     if(el) el.min = t;
@@ -1503,7 +1518,7 @@ loadInventory();
 // 這個值必須與 sw.js 的 CACHE_VERSION **完全一致**:checkVersion() 是抓 sw.js
 // 比對兩邊版本號,不一致就顯示「發現新版本」橫幅。只改其中一邊的話,橫幅會
 // 永遠關不掉(按「立即更新」重載後仍然不一致,又立刻跳出來)。
-const CURRENT_VERSION = 'v38';
+const CURRENT_VERSION = 'v39';
 let pendingWorker = null;
 
 function showUpdateBanner(){
