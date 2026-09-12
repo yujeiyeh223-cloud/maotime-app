@@ -268,7 +268,7 @@ textarea{resize:none;line-height:1.5}
     </div>
     <div>
       <div class="brand-name">卯時設計有限公司</div>
-      <div class="brand-sub">套量服外借管理系統 v41</div>
+      <div class="brand-sub">套量服外借管理系統 v42</div>
     </div>
     <button class="refresh-btn" id="refresh-btn" onclick="doRefresh()" title="刷新庫存">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
@@ -554,6 +554,15 @@ textarea{resize:none;line-height:1.5}
     <button class="modal-action blue" id="m-action-btn" style="display:none" onclick="modalToBorrow()">📋 正式外借</button>
     <button class="modal-action" id="m-return-btn" style="display:none;background:#1B8A5A;color:#fff" onclick="modalToReturn()">📦 確認歸還</button>
     <button class="modal-action" id="m-receipt-btn" style="display:none;background:#1a1a1a;color:#fff" onclick="modalGenerateReceipt()">📄 產生外借憑證</button>
+    <button class="modal-action" id="m-extend-btn" style="display:none;background:#FFF4E0;color:#8A5A1B" onclick="toggleExtendPanel()">⏳ 延期（改歸還日）</button>
+    <div id="m-extend-panel" style="display:none;margin-top:8px;padding:12px;background:#FAFAF8;border-radius:13px">
+      <div class="field-grp"><label class="field-lbl">經手業務</label>
+        <select id="m-extend-staff"><option value="">— 請選擇 —</option><option>YuHsuan</option><option>Minzu</option><option>CM</option><option>CY</option><option>MM</option><option>WL</option><option>YJY</option></select>
+      </div>
+      <div class="field-grp"><label class="field-lbl">改成幾號歸還</label><input type="date" id="m-extend-due"></div>
+      <div class="field-grp"><label class="field-lbl">備註（選填）</label><textarea id="m-extend-note" rows="2" placeholder="如有原因請填寫"></textarea></div>
+      <button class="modal-action blue" id="m-extend-submit" onclick="modalSubmitExtend()">確認延期</button>
+    </div>
     <button class="modal-action" id="m-cancel-btn" style="display:none;background:#FCEBEB;color:#A32D2D;margin-top:8px" onclick="modalCancelReserve()">✕ 取消預約</button>
     <button class="modal-close" onclick="closeModal()">關閉</button>
   </div>
@@ -1199,8 +1208,8 @@ function renderLoans(){
     list.innerHTML='<div class="empty-state"><div class="empty-icon">🔍</div><div>沒有符合條件的紀錄</div></div>';
     return;
   }
-  const icons={'外借':'📤','歸還':'📦','預約':'📅','取消預約':'✕'};
-  const chips={'外借':'out','歸還':'in','預約':'res','取消預約':'cancel'};
+  const icons={'外借':'📤','歸還':'📦','預約':'📅','取消預約':'✕','延期':'⏳'};
+  const chips={'外借':'out','歸還':'in','預約':'res','取消預約':'cancel','延期':'res'};
   list.innerHTML=rows.map(r=>{
     const dateLine = r.action==='歸還' ? ('歸還 '+(r.returnDate||'—')+(r.condition?'・'+r.condition:''))
       : r.action==='取消預約' ? ('取消於 '+(r.returnDate||r.timestamp||'—'))
@@ -1228,9 +1237,15 @@ function showDetail(id){
   const cancelBtn=document.getElementById('m-cancel-btn');
   const receiptBtn=document.getElementById('m-receipt-btn');
   const returnBtn=document.getElementById('m-return-btn');
+  const extendBtn=document.getElementById('m-extend-btn');
   // 預設都隱藏
   actionBtn.style.display='none'; cancelBtn.style.display='none'; receiptBtn.style.display='none'; returnBtn.style.display='none';
   cancelBtn.textContent='✕ 取消預約';
+  // 延期改的是「目前這筆」的應還日,所以在庫中以外都給(與 GAS 的 handleExtend
+  // 同一條規則:在庫中沒有可以延的借用,兩邊都擋)。每次開 Modal 都把面板收起來、
+  // 欄位清掉,不然上一件填到一半的值會跟著跑到下一件。
+  extendBtn.style.display = item.status==='in' ? 'none' : 'block';
+  resetExtendPanel(item);
   let rows=[];
   if(item.status==='in'){
     rows=[['目前狀態','在庫中 ✅'],['可借出','是']];
@@ -1454,6 +1469,58 @@ function modalToReturn(){
   setTimeout(()=>{ onReturn(item.id); },100);
 }
 
+/** 每次開 Modal 都收起面板並清空,避免上一件的值殘留到下一件。 */
+function resetExtendPanel(item){
+  const panel=document.getElementById('m-extend-panel');
+  if(panel) panel.style.display='none';
+  const staff=document.getElementById('m-extend-staff'); if(staff) staff.value=item&&item.staff?item.staff:'';
+  const note=document.getElementById('m-extend-note');   if(note)  note.value='';
+  const due=document.getElementById('m-extend-due');
+  if(due){
+    due.value='';
+    // 只是瀏覽器層的順手提示,不是驗證——真正擋「只能往後」的是 GAS 的 handleExtend
+    // (它比的是試算表當下的值;手機這份庫存是上次刷新時抓的,拿它擋會擋錯)。
+    if(item&&item.dueDate) due.min=item.dueDate; else due.removeAttribute('min');
+  }
+}
+
+function toggleExtendPanel(){
+  const panel=document.getElementById('m-extend-panel');
+  if(!panel)return;
+  panel.style.display = panel.style.display==='none' ? 'block' : 'none';
+}
+
+async function modalSubmitExtend(){
+  const item=findItem(modalCurrentId);
+  if(!item)return;
+  const staff=document.getElementById('m-extend-staff').value.trim();
+  const dueDate=document.getElementById('m-extend-due').value;
+  const note=document.getElementById('m-extend-note').value;
+  if(!staff){alert('請選擇經手業務');return;}
+  if(!dueDate){alert('請選擇要改成幾號歸還');return;}
+
+  const btn=document.getElementById('m-extend-submit');
+  btn.textContent='送出中…';btn.disabled=true;
+  const r=await callAPIAsync({action:'extend',itemId:item.id,dueDate,staff,note});
+  btn.textContent='確認延期';btn.disabled=false;
+
+  if(!r||!r.success){
+    alert('延期失敗：'+((r&&r.error)||'伺服器拒絕了這個操作')+
+      '\n\n請先按右上角刷新，確認這件衣服的歸還日是不是其實已經改掉了，'+
+      '再決定要不要重送——伺服器有可能已經寫進去，只是回應沒回到手機。');
+    return;
+  }
+
+  item.dueDate=dueDate;
+  // 逾期的衣服延期之後可能就不逾期了,但狀態是 GAS 算的——不要在這裡自己推,
+  // 刷新時會拿到正確的。這裡只更新看得到的日期。
+  closeModal();
+  updateDashboard();
+  renderInv();
+  // warning = 寫進去了、但撞到下一筆預約。不是失敗,所以照樣報成功,只是要講出來。
+  alert('✅ 已延期至 '+dueDate + (r.warning ? '\n\n⚠️ '+r.warning : ''));
+}
+
 async function modalCancelReserve(){
   const item=findItem(modalCurrentId);
   if(!item)return;
@@ -1623,7 +1690,7 @@ loadInventory();
 // 這個值必須與 sw.js 的 CACHE_VERSION **完全一致**:checkVersion() 是抓 sw.js
 // 比對兩邊版本號,不一致就顯示「發現新版本」橫幅。只改其中一邊的話,橫幅會
 // 永遠關不掉(按「立即更新」重載後仍然不一致,又立刻跳出來)。
-const CURRENT_VERSION = 'v41';
+const CURRENT_VERSION = 'v42';
 let pendingWorker = null;
 
 function showUpdateBanner(){
