@@ -268,7 +268,7 @@ textarea{resize:none;line-height:1.5}
     </div>
     <div>
       <div class="brand-name">卯時設計有限公司</div>
-      <div class="brand-sub">套量服外借管理系統 v40</div>
+      <div class="brand-sub">套量服外借管理系統 v41</div>
     </div>
     <button class="refresh-btn" id="refresh-btn" onclick="doRefresh()" title="刷新庫存">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
@@ -452,11 +452,6 @@ textarea{resize:none;line-height:1.5}
       <select id="r-condition"><option value="良好">衣服狀態良好</option><option value="有輕微污損">有輕微污損</option><option value="需要清洗">需要清洗</option><option value="有損壞">有損壞，需維修</option></select>
     </div>
     <div class="field-grp"><label class="field-lbl">備註（選填）</label><textarea id="r-note" rows="2" placeholder="如有異常請填寫"></textarea></div>
-  </div>
-  <div class="sig-card" id="r-sig-card">
-    <div class="sig-hdr"><span class="sig-title">✍️ 收件人簽名確認</span><button class="sig-clear" onclick="clearSig('r-sig')">清除重簽</button></div>
-    <canvas class="sig-canvas" id="r-sig" height="200" style="background:#f0faf6"></canvas>
-    <div class="sig-hint">請在上方空白處手寫簽名確認已收回</div>
   </div>
   <button class="submit-btn sb-green" id="r-submit" onclick="submitReturn()">確認歸還 →</button>
   <div class="success-scr" id="r-success">
@@ -902,10 +897,9 @@ function resetBorrow(){initBorrow();goHome();}
 // ==================== RETURN ====================
 function initReturn(fromModal){
   scannedRId=null;selectedRType='';selectedRNum='';
-  ['r-preview','r-form','r-sig-card'].forEach(id=>document.getElementById(id).classList.remove('show'));
+  ['r-preview','r-form'].forEach(id=>document.getElementById(id).classList.remove('show'));
   document.getElementById('r-submit').classList.remove('show');
   document.getElementById('r-success').classList.remove('show');
-  clearCanvas('r-sig');
   ['r-handler','r-note'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
 
   if(fromModal){
@@ -961,10 +955,8 @@ function onReturn(id){
   document.getElementById('r-ddate-val').textContent=item.dueDate||'—';
   document.getElementById('r-preview').classList.add('show');
   document.getElementById('r-form').classList.add('show');
-  document.getElementById('r-sig-card').classList.add('show');
   document.getElementById('r-submit').classList.add('show');
   hideScanCard('r');
-  initSig('r-sig');
   if(returnScanner){try{returnScanner.stop();}catch(e){}returnScanner=null;}
 }
 
@@ -973,9 +965,8 @@ async function submitReturn(){
   const condition=document.getElementById('r-condition').value;
   const note=document.getElementById('r-note').value;
   if(!handler){alert('請選擇經手業務');return;}
-  if(!hasSig('r-sig')){alert('請完成收件人手寫簽名確認');return;}
   const btn=document.getElementById('r-submit');
-  btn.textContent='上傳中…';btn.disabled=true;
+  btn.textContent='登記中…';btn.disabled=true;
   const rDate=today();
   const r=await callAPIAsync({action:'return',itemId:scannedRId,handler,condition,note,returnDate:rDate});
   if(!r||!r.success){
@@ -983,11 +974,6 @@ async function submitReturn(){
       '\n\n請先按右上角刷新，確認這件衣服的狀態是不是其實已經改掉了，'+
       '再決定要不要重登——伺服器有可能已經寫進去，只是回應沒回到手機。');
     btn.textContent='確認歸還 →';btn.disabled=false;return;
-  }
-  const sigData=getCanvasWithWhiteBg('r-sig');
-  const sigOk=await uploadSigPost(r.recordId,sigData);
-  if(!sigOk){
-    alert('⚠️ 歸還已經登記成功，但簽名沒有上傳成功。\n請回報管理者補上簽名。\n憑證編號：'+(r.recordId||'—'));
   }
   const item=findItem(scannedRId);
   if(item){
@@ -1011,7 +997,7 @@ async function submitReturn(){
     successMsg += '\n\n📅 此衣服已自動轉為預約中\n預約客戶：'+r.nextReserve.client+'\n預計借出：'+r.nextReserve.borrowDate;
   }
   document.getElementById('r-success-msg').textContent=successMsg;
-  ['r-preview','r-form','r-sig-card'].forEach(id=>document.getElementById(id).classList.remove('show'));
+  ['r-preview','r-form'].forEach(id=>document.getElementById(id).classList.remove('show'));
   btn.classList.remove('show');btn.textContent='確認歸還 →';btn.disabled=false;
   document.getElementById('r-success').classList.add('show');
   updateDashboard();
@@ -1631,13 +1617,13 @@ document.getElementById('d-overdue').textContent='…';
 setDateMins();
 loadInventory();
 // 預先初始化所有簽名 canvas（事件在觸碰時才計算座標，不受 display:none 影響）
-['b-sig','r-sig'].forEach(id=>initSig(id));
+['b-sig'].forEach(id=>initSig(id));
 
 // ==================== UPDATE ====================
 // 這個值必須與 sw.js 的 CACHE_VERSION **完全一致**:checkVersion() 是抓 sw.js
 // 比對兩邊版本號,不一致就顯示「發現新版本」橫幅。只改其中一邊的話,橫幅會
 // 永遠關不掉(按「立即更新」重載後仍然不一致,又立刻跳出來)。
-const CURRENT_VERSION = 'v40';
+const CURRENT_VERSION = 'v41';
 let pendingWorker = null;
 
 function showUpdateBanner(){
