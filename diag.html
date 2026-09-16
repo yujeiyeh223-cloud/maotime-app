@@ -9,8 +9,9 @@
 body{margin:0;padding:16px calc(env(safe-area-inset-left,0px) + 14px) calc(env(safe-area-inset-bottom,0px) + 24px);
   background:#151515;color:#eee;font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif;line-height:1.5}
 h1{font-size:19px;margin:8px 0 4px}
+h2{font-size:15px;margin:20px 0 8px;color:#e0b35c}
 .sub{font-size:13px;color:#999;margin-bottom:14px}
-.env{background:#1f1f1f;border-radius:10px;padding:10px 12px;font-size:12px;color:#aaa;margin-bottom:14px;word-break:break-all}
+.env{background:#1f1f1f;border-radius:10px;padding:10px 12px;font-size:12px;color:#aaa;margin-bottom:14px;word-break:break-all;white-space:pre-wrap}
 button{width:100%;padding:14px;border:none;border-radius:12px;background:#c1512a;color:#fff;
   font-family:inherit;font-size:16px;font-weight:700;margin-bottom:14px}
 button:disabled{opacity:.5}
@@ -20,115 +21,137 @@ button:disabled{opacity:.5}
 .ok{border-left:4px solid #2f7a4f}
 .bad{border-left:4px solid #c43d3d}
 .run{border-left:4px solid #c98a2c}
+.verdict{background:#23201a;border:1px solid #4a4030;border-radius:12px;padding:14px;margin-bottom:14px;font-size:15px;line-height:1.7}
 .big{font-size:15px;font-weight:700}
 .g{color:#5fbf85}.r{color:#ef7676}.y{color:#e0b35c}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.chip{padding:3px 9px;border-radius:999px;font-size:12px;font-family:ui-monospace,Menlo,monospace}
+.chip.g{background:#1d3b2a;color:#7fd3a0}
+.chip.r{background:#3d1f1f;color:#ef8a8a}
 </style>
 </head>
 <body>
-<h1>套量服 連線診斷</h1>
-<div class="sub">只做讀取，不會寫入任何資料。跑完請把整個畫面截圖。</div>
+<h1>套量服 連線診斷（第二輪）</h1>
+<div class="sub">驗證「卡住就重打」能不能救回來，並量出到底多常卡住。只做讀取，不寫入任何資料。<br>大約要跑 1～2 分鐘，跑完請整頁截圖。</div>
 <div class="env" id="env">…</div>
 <button id="go" onclick="runAll()">開始測試</button>
 <div id="out"></div>
 
 <script>
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbxFjRU0iMA-XmUFUxp2q8-W1-iQd6XF6HpMCeENCbGRnzO_6w2nPpsctWNWxH1k0Y7y3w/exec';
-const LIMIT = 12000;   // 每項最多等 12 秒(App 本身是 20 秒,這裡短一點免得等太久)
+const INV = GAS_URL + '?action=getInventory&data=%7B%7D';   // 與 App 送出的網址完全一致
+const TRY_MS   = 8000;   // 提案:每一發只等 8 秒(現在的 App 是等 20 秒)
+const MAX_TRY  = 3;      // 提案:最多重打 3 次
+const SAMPLES  = 8;      // 統計用:連打幾次
 
 document.getElementById('env').textContent =
   '頁面來源：' + location.origin +
   '\n連線狀態：' + (navigator.onLine ? '線上' : '離線') +
   '\nService Worker：' + (navigator.serviceWorker && navigator.serviceWorker.controller ? '有接管這一頁' : '沒有接管') +
-  '\n瀏覽器：' + navigator.userAgent;
+  '\n測試網址：與 App 送出的完全一致（含 &data=%7B%7D）';
 
 const out = document.getElementById('out');
+function el(tag, cls, html){ const e=document.createElement(tag); if(cls) e.className=cls; if(html!=null) e.innerHTML=html; out.appendChild(e); return e; }
+function addRow(name){ const e=el('div','row run','<div class="n">'+name+'</div><div class="d">測試中…</div>'); return e; }
+function done(e, good, lines){ e.className='row '+(good?'ok':'bad'); e.querySelector('.d').innerHTML=lines.join('<br>'); }
 
-function addRow(name){
-  const el = document.createElement('div');
-  el.className = 'row run';
-  el.innerHTML = '<div class="n">' + name + '</div><div class="d">測試中…</div>';
-  out.appendChild(el);
-  return el;
-}
-function done(el, good, lines){
-  el.className = 'row ' + (good ? 'ok' : 'bad');
-  el.querySelector('.d').innerHTML = lines.join('<br>');
-}
-
-/** fetch:分開量「拿到標頭」與「讀完內容」的時間,才分得出是連不上還是吐不完。 */
-async function tFetch(name, url, opts){
-  const el = addRow(name);
+/** 打一發。回傳 ok / 耗時 / 是不是「卡住」(逾時)。用 App 一模一樣的 fetch 選項。 */
+async function once(url, limitMs){
   const ctl = new AbortController();
-  const timer = setTimeout(()=>ctl.abort(), LIMIT);
+  const timer = setTimeout(()=>ctl.abort(), limitMs);
   const t0 = performance.now();
   try{
-    const r = await fetch(url, Object.assign({signal: ctl.signal}, opts||{}));
-    const tHead = Math.round(performance.now()-t0);
+    const r = await fetch(url, {cache:'no-store', signal: ctl.signal});
     const text = await r.text();
-    const tBody = Math.round(performance.now()-t0);
     clearTimeout(timer);
-    let parsed = '(不是 JSON)';
-    try{ const j = JSON.parse(text); parsed = 'success=' + j.success + (j.items ? '，items=' + j.items.length + ' 筆' : ''); }catch(e){}
-    done(el, r.ok, [
-      '<span class="big g">成功</span>　HTTP ' + r.status,
-      '標頭 <b>' + tHead + ' ms</b>　內容 <b>' + tBody + ' ms</b>',
-      '長度 ' + text.length + ' 字元　' + parsed,
-    ]);
+    let items = null;
+    try{ items = (JSON.parse(text).items||[]).length; }catch(e){}
+    return {ok:r.ok, ms:Math.round(performance.now()-t0), status:r.status, items:items};
   }catch(e){
     clearTimeout(timer);
-    const t = Math.round(performance.now()-t0);
-    const isTimeout = e.name === 'AbortError';
-    done(el, false, [
-      '<span class="big r">' + (isTimeout ? '卡住(逾時)' : '失敗') + '</span>　' + t + ' ms',
-      e.name + '：' + (e.message || '(沒有訊息)'),
-      isTimeout ? '→ 等滿 ' + (LIMIT/1000) + ' 秒都沒有回應' : '→ 立刻被拒絕,不是卡住',
-    ]);
+    return {ok:false, ms:Math.round(performance.now()-t0),
+            timeout:(e.name==='AbortError'), err:e.name+'：'+(e.message||'(沒有訊息)')};
   }
 }
 
-/** XMLHttpRequest:走的是另一套實作,fetch 卡住而它能過的話就知道問題在哪一層。 */
-function tXhr(name, url){
-  const el = addRow(name);
-  return new Promise(res=>{
-    const t0 = performance.now();
-    const x = new XMLHttpRequest();
-    let settled = false;
-    const finish = (good, lines)=>{ if(settled) return; settled = true; done(el, good, lines); res(); };
-    x.timeout = LIMIT;
-    x.onload = ()=>{
-      const t = Math.round(performance.now()-t0);
-      let parsed = '(不是 JSON)';
-      try{ const j = JSON.parse(x.responseText); parsed = 'success=' + j.success + (j.items ? '，items=' + j.items.length + ' 筆' : ''); }catch(e){}
-      finish(x.status >= 200 && x.status < 300,
-        ['<span class="big g">成功</span>　HTTP ' + x.status, '耗時 <b>' + t + ' ms</b>',
-         '長度 ' + x.responseText.length + ' 字元　' + parsed]);
-    };
-    x.onerror   = ()=>finish(false, ['<span class="big r">失敗</span>　' + Math.round(performance.now()-t0) + ' ms',
-                                     '被瀏覽器擋掉(多半是 CORS),不是卡住']);
-    x.ontimeout = ()=>finish(false, ['<span class="big r">卡住(逾時)</span>　' + Math.round(performance.now()-t0) + ' ms',
-                                     '等滿 ' + (LIMIT/1000) + ' 秒都沒有回應']);
-    try{ x.open('GET', url); x.send(); }
-    catch(e){ finish(false, ['<span class="big r">送不出去</span>', e.name + '：' + e.message]); }
-  });
+/** 提案中的修法:每發 8 秒上限,卡住就重打,最多三次。讀取是唯讀的,重打安全。 */
+async function withRetry(){
+  const log = [];
+  const t0 = performance.now();
+  for(let i=1; i<=MAX_TRY; i++){
+    const r = await once(INV, TRY_MS);
+    log.push(r);
+    if(r.ok) return {ok:true, log, total:Math.round(performance.now()-t0)};
+  }
+  return {ok:false, log, total:Math.round(performance.now()-t0)};
+}
+
+function describe(r){
+  if(r.ok) return '<span class="g">成功</span> ' + r.ms + ' ms（' + r.items + ' 筆）';
+  if(r.timeout) return '<span class="r">卡住</span> ' + r.ms + ' ms（等滿 ' + (TRY_MS/1000) + ' 秒）';
+  return '<span class="r">失敗</span> ' + r.ms + ' ms　' + r.err;
 }
 
 async function runAll(){
   out.innerHTML = '';
   const btn = document.getElementById('go');
-  btn.disabled = true; btn.textContent = '測試中…';
+  btn.disabled = true; btn.textContent = '測試中…（請不要切走）';
 
-  const ping = GAS_URL + '?action=ping';
-  const inv  = GAS_URL + '?action=getInventory';
+  // ---------- A:重試策略跑三輪 ----------
+  el('h2', null, 'A. 提案的修法：每發等 ' + (TRY_MS/1000) + ' 秒，卡住就重打（最多 ' + MAX_TRY + ' 次）');
+  const aResults = [];
+  for(let round=1; round<=3; round++){
+    const row = addRow('第 ' + round + ' 輪');
+    const res = await withRetry();
+    aResults.push(res);
+    const lines = res.log.map((r,i)=>'　第 '+(i+1)+' 發：'+describe(r));
+    lines.unshift('<span class="big ' + (res.ok?'g':'r') + '">' +
+      (res.ok ? '拿到資料（共 ' + res.total + ' ms，打了 ' + res.log.length + ' 發）' : '三發都沒拿到') + '</span>');
+    done(row, res.ok, lines);
+  }
 
-  // 一次跑一項、不併發:同時打好幾條會互相排隊,結果就分不出是誰的問題。
-  await tFetch('① fetch 小回應(ping)　不帶任何選項', ping);
-  await tFetch('② fetch 小回應(ping)　cache:no-store', ping, {cache:'no-store'});
-  await tFetch('③ fetch 大回應(庫存)　不帶任何選項', inv);
-  await tFetch('④ fetch 大回應(庫存)　cache:no-store　← App 現在用的寫法', inv, {cache:'no-store'});
-  await tFetch('⑤ fetch 大回應(庫存)　cache:reload', inv, {cache:'reload'});
-  await tXhr  ('⑥ XMLHttpRequest 大回應(庫存)', inv);
+  // ---------- B:連打統計,量卡住的頻率 ----------
+  el('h2', null, 'B. 連打 ' + SAMPLES + ' 次（每次 ' + (TRY_MS/1000) + ' 秒上限），看多常卡住');
+  const row = addRow('進行中…');
+  const samples = [];
+  const chipsWrap = document.createElement('div'); chipsWrap.className='chips';
+  row.appendChild(chipsWrap);
+  for(let i=0; i<SAMPLES; i++){
+    const r = await once(INV, TRY_MS);
+    samples.push(r);
+    const c = document.createElement('span');
+    c.className = 'chip ' + (r.ok?'g':'r');
+    c.textContent = (i+1) + '：' + (r.ok ? r.ms+'ms' : (r.timeout?'卡住':'失敗'));
+    chipsWrap.appendChild(c);
+    row.querySelector('.d').textContent = '已打 ' + (i+1) + ' / ' + SAMPLES + '…';
+  }
+  const bad = samples.filter(s=>!s.ok).length;
+  const good = samples.filter(s=>s.ok);
+  const avg = good.length ? Math.round(good.reduce((a,b)=>a+b.ms,0)/good.length) : 0;
+  row.className = 'row ' + (bad? 'bad':'ok');
+  row.querySelector('.n').textContent = '結果';
+  row.querySelector('.d').innerHTML =
+    '<span class="big ' + (bad?'r':'g') + '">' + SAMPLES + ' 次裡卡住 ' + bad + ' 次</span>' +
+    '<br>' + (good.length ? '成功那幾次平均 <b>' + avg + ' ms</b>' : '沒有任何一次成功');
+
+  // ---------- 結論 ----------
+  const aOk = aResults.filter(r=>r.ok).length;
+  const needed = aResults.filter(r=>r.ok && r.log.length>1).length;
+  const v = document.createElement('div'); v.className='verdict';
+  v.innerHTML =
+    '<b>這一輪的結論</b><br>' +
+    '· 重試策略：三輪裡 <b>' + aOk + ' 輪</b>拿到資料' + (needed? '（其中 ' + needed + ' 輪是靠重打才救回來的）' : '') + '<br>' +
+    '· 卡住頻率：<b>' + bad + ' / ' + SAMPLES + '</b><br>' +
+    '· 正常時的速度：' + (good.length ? '約 <b>' + avg + ' ms</b>' : '<b>沒有成功的樣本</b>') + '<br><br>' +
+    (bad === 0
+      ? '這一輪完全沒卡住。請等一下再按「再測一次」，多測幾輪才看得出頻率。'
+      : (aOk === 3
+        ? '有卡住，但重試策略每一輪都救回來了 → 這個修法有效。'
+        : '重試三次仍有拿不到的情況，重試次數或許要再加，或是有別的原因。'));
+  out.insertBefore(v, out.firstChild);
 
   btn.disabled = false; btn.textContent = '再測一次';
+  window.scrollTo(0,0);
 }
 </script>
 </body>
