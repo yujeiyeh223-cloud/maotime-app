@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>套量服 連線診斷</title>
+<style>
+:root{color-scheme:dark}
+body{margin:0;padding:16px calc(env(safe-area-inset-left,0px) + 14px) calc(env(safe-area-inset-bottom,0px) + 24px);
+  background:#151515;color:#eee;font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif;line-height:1.5}
+h1{font-size:19px;margin:8px 0 4px}
+.sub{font-size:13px;color:#999;margin-bottom:14px}
+.env{background:#1f1f1f;border-radius:10px;padding:10px 12px;font-size:12px;color:#aaa;margin-bottom:14px;word-break:break-all}
+button{width:100%;padding:14px;border:none;border-radius:12px;background:#c1512a;color:#fff;
+  font-family:inherit;font-size:16px;font-weight:700;margin-bottom:14px}
+button:disabled{opacity:.5}
+.row{background:#1f1f1f;border-radius:10px;padding:11px 12px;margin-bottom:9px;font-size:13px}
+.row .n{font-weight:700;font-size:14px;margin-bottom:3px}
+.row .d{color:#bbb;font-family:ui-monospace,Menlo,monospace;font-size:12px;word-break:break-all}
+.ok{border-left:4px solid #2f7a4f}
+.bad{border-left:4px solid #c43d3d}
+.run{border-left:4px solid #c98a2c}
+.big{font-size:15px;font-weight:700}
+.g{color:#5fbf85}.r{color:#ef7676}.y{color:#e0b35c}
+</style>
+</head>
+<body>
+<h1>套量服 連線診斷</h1>
+<div class="sub">只做讀取，不會寫入任何資料。跑完請把整個畫面截圖。</div>
+<div class="env" id="env">…</div>
+<button id="go" onclick="runAll()">開始測試</button>
+<div id="out"></div>
+
+<script>
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbxFjRU0iMA-XmUFUxp2q8-W1-iQd6XF6HpMCeENCbGRnzO_6w2nPpsctWNWxH1k0Y7y3w/exec';
+const LIMIT = 12000;   // 每項最多等 12 秒(App 本身是 20 秒,這裡短一點免得等太久)
+
+document.getElementById('env').textContent =
+  '頁面來源：' + location.origin +
+  '\n連線狀態：' + (navigator.onLine ? '線上' : '離線') +
+  '\nService Worker：' + (navigator.serviceWorker && navigator.serviceWorker.controller ? '有接管這一頁' : '沒有接管') +
+  '\n瀏覽器：' + navigator.userAgent;
+
+const out = document.getElementById('out');
+
+function addRow(name){
+  const el = document.createElement('div');
+  el.className = 'row run';
+  el.innerHTML = '<div class="n">' + name + '</div><div class="d">測試中…</div>';
+  out.appendChild(el);
+  return el;
+}
+function done(el, good, lines){
+  el.className = 'row ' + (good ? 'ok' : 'bad');
+  el.querySelector('.d').innerHTML = lines.join('<br>');
+}
+
+/** fetch:分開量「拿到標頭」與「讀完內容」的時間,才分得出是連不上還是吐不完。 */
+async function tFetch(name, url, opts){
+  const el = addRow(name);
+  const ctl = new AbortController();
+  const timer = setTimeout(()=>ctl.abort(), LIMIT);
+  const t0 = performance.now();
+  try{
+    const r = await fetch(url, Object.assign({signal: ctl.signal}, opts||{}));
+    const tHead = Math.round(performance.now()-t0);
+    const text = await r.text();
+    const tBody = Math.round(performance.now()-t0);
+    clearTimeout(timer);
+    let parsed = '(不是 JSON)';
+    try{ const j = JSON.parse(text); parsed = 'success=' + j.success + (j.items ? '，items=' + j.items.length + ' 筆' : ''); }catch(e){}
+    done(el, r.ok, [
+      '<span class="big g">成功</span>　HTTP ' + r.status,
+      '標頭 <b>' + tHead + ' ms</b>　內容 <b>' + tBody + ' ms</b>',
+      '長度 ' + text.length + ' 字元　' + parsed,
+    ]);
+  }catch(e){
+    clearTimeout(timer);
+    const t = Math.round(performance.now()-t0);
+    const isTimeout = e.name === 'AbortError';
+    done(el, false, [
+      '<span class="big r">' + (isTimeout ? '卡住(逾時)' : '失敗') + '</span>　' + t + ' ms',
+      e.name + '：' + (e.message || '(沒有訊息)'),
+      isTimeout ? '→ 等滿 ' + (LIMIT/1000) + ' 秒都沒有回應' : '→ 立刻被拒絕,不是卡住',
+    ]);
+  }
+}
+
+/** XMLHttpRequest:走的是另一套實作,fetch 卡住而它能過的話就知道問題在哪一層。 */
+function tXhr(name, url){
+  const el = addRow(name);
+  return new Promise(res=>{
+    const t0 = performance.now();
+    const x = new XMLHttpRequest();
+    let settled = false;
+    const finish = (good, lines)=>{ if(settled) return; settled = true; done(el, good, lines); res(); };
+    x.timeout = LIMIT;
+    x.onload = ()=>{
+      const t = Math.round(performance.now()-t0);
+      let parsed = '(不是 JSON)';
+      try{ const j = JSON.parse(x.responseText); parsed = 'success=' + j.success + (j.items ? '，items=' + j.items.length + ' 筆' : ''); }catch(e){}
+      finish(x.status >= 200 && x.status < 300,
+        ['<span class="big g">成功</span>　HTTP ' + x.status, '耗時 <b>' + t + ' ms</b>',
+         '長度 ' + x.responseText.length + ' 字元　' + parsed]);
+    };
+    x.onerror   = ()=>finish(false, ['<span class="big r">失敗</span>　' + Math.round(performance.now()-t0) + ' ms',
+                                     '被瀏覽器擋掉(多半是 CORS),不是卡住']);
+    x.ontimeout = ()=>finish(false, ['<span class="big r">卡住(逾時)</span>　' + Math.round(performance.now()-t0) + ' ms',
+                                     '等滿 ' + (LIMIT/1000) + ' 秒都沒有回應']);
+    try{ x.open('GET', url); x.send(); }
+    catch(e){ finish(false, ['<span class="big r">送不出去</span>', e.name + '：' + e.message]); }
+  });
+}
+
+async function runAll(){
+  out.innerHTML = '';
+  const btn = document.getElementById('go');
+  btn.disabled = true; btn.textContent = '測試中…';
+
+  const ping = GAS_URL + '?action=ping';
+  const inv  = GAS_URL + '?action=getInventory';
+
+  // 一次跑一項、不併發:同時打好幾條會互相排隊,結果就分不出是誰的問題。
+  await tFetch('① fetch 小回應(ping)　不帶任何選項', ping);
+  await tFetch('② fetch 小回應(ping)　cache:no-store', ping, {cache:'no-store'});
+  await tFetch('③ fetch 大回應(庫存)　不帶任何選項', inv);
+  await tFetch('④ fetch 大回應(庫存)　cache:no-store　← App 現在用的寫法', inv, {cache:'no-store'});
+  await tFetch('⑤ fetch 大回應(庫存)　cache:reload', inv, {cache:'reload'});
+  await tXhr  ('⑥ XMLHttpRequest 大回應(庫存)', inv);
+
+  btn.disabled = false; btn.textContent = '再測一次';
+}
+</script>
+</body>
+</html>
