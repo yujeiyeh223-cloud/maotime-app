@@ -1,6 +1,6 @@
 // 卯時設計 套量服管理系統 - Service Worker
 // 版本號每次更新 HTML 時一起改，確保快取強制更新
-const CACHE_VERSION = 'v42';
+const CACHE_VERSION = 'v43';
 const CACHE_NAME = 'maotime-' + CACHE_VERSION;
 
 // 安裝：快取主要檔案
@@ -26,7 +26,13 @@ self.addEventListener('message', e => {
   if(e.data && e.data.action === 'skipWaiting') self.skipWaiting();
 });
 
-// 網路優先：每次都嘗試從網路取最新版，失敗才用快取。
+// 本站資源:**先給快取、同時在背景抓新的**(stale-while-revalidate)。
+//
+// 原本是網路優先——每次開 App 都要先等 index.html(92KB)從網路回來才開始畫,
+// 訊號差的時候就是好幾秒的白畫面。而「有沒有新版本」本來就由另一套機制負責
+// (sw.js 換了位元組 → updatefound → 「發現新版本」橫幅 → 立即更新),
+// 不需要靠每次開啟都重抓 index.html 來達成。sw.js 自己一律走網路,
+// 不然版本比對會讀到快取裡的舊版,橫幅永遠不會跳。
 //
 // **只處理本站資源，跨來源（GAS API）一律不攔**（2026-09-12 修）。
 // 原本這裡攔下頁面發出的每一個 GET，包含打到 script.google.com 的 API，然後
@@ -42,18 +48,29 @@ self.addEventListener('message', e => {
 self.addEventListener('fetch', e => {
   if(e.request.method !== 'GET') return;
   // 跨來源請求（GAS API、CDN）直接放行給瀏覽器自己處理，SW 不碰。
-  let sameOrigin = false;
-  try{ sameOrigin = new URL(e.request.url).origin === self.location.origin; }catch(err){ return; }
-  if(!sameOrigin) return;
+  let url;
+  try{ url = new URL(e.request.url); }catch(err){ return; }
+  if(url.origin !== self.location.origin) return;
+  // sw.js 一律走網路:版本比對讀的就是它,吃到快取的話新版永遠不會被發現。
+  if(url.pathname.endsWith('/sw.js')) return;
+
   e.respondWith(
-    fetch(e.request).then(response => {
-      const clone = response.clone();
-      // 掛上 waitUntil，SW 才不會在 clone 還沒被讀完就被回收。
-      const job = caches.open(CACHE_NAME)
-        .then(cache => cache.put(e.request, clone))
-        .catch(() => {});   // 配額不足等等，不要變成未處理的 rejection
-      try{ e.waitUntil(job); }catch(err){}
-      return response;
-    }).catch(() => caches.match(e.request))
+    caches.match(e.request).then(cached => {
+      const network = fetch(e.request).then(response => {
+        // 只快取成功的回應,不要把 404 存起來當成正版。
+        if(response && response.ok){
+          const clone = response.clone();
+          // 掛上 waitUntil，SW 才不會在 clone 還沒被讀完就被回收。
+          const job = caches.open(CACHE_NAME)
+            .then(cache => cache.put(e.request, clone))
+            .catch(() => {});   // 配額不足等等，不要變成未處理的 rejection
+          try{ e.waitUntil(job); }catch(err){}
+        }
+        return response;
+      }).catch(() => cached);   // 離線:退回快取(沒有快取就是 undefined,與原本一致)
+      // 有快取就立刻回,背景那趟仍要 waitUntil 撐著,不然 SW 被回收就白抓了。
+      if(cached){ try{ e.waitUntil(network); }catch(err){} return cached; }
+      return network;
+    })
   );
 });

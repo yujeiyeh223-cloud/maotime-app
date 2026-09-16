@@ -268,7 +268,7 @@ textarea{resize:none;line-height:1.5}
     </div>
     <div>
       <div class="brand-name">卯時設計有限公司</div>
-      <div class="brand-sub">套量服外借管理系統 v42</div>
+      <div class="brand-sub">套量服外借管理系統 v43</div>
     </div>
     <button class="refresh-btn" id="refresh-btn" onclick="doRefresh()" title="刷新庫存">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
@@ -615,6 +615,38 @@ const INV_FILTERS = [
 
 // ==================== STATE ====================
 let inventory = [];
+
+// ==================== 庫存快照 ====================
+// 開啟 App 時先畫上一次成功讀到的庫存,再去抓新的。GAS 的 doGet 常態 1~3 秒
+// (2026-09-16 對照執行紀錄:9/11 與 9/16 都是這個區間,伺服器沒有變慢),
+// 空等那一趟就是同事說的「變慢」。
+//
+// **一定要標明資料時間**——2026-09-12 之前 service worker 也在做類似的事,
+// 但它安靜地把舊資料當成新的給出去,同事照著已經被借走的庫存去外借才發現。
+// 快取本身不是問題,不講才是。所以這裡一律先顯示「資料為 X 前,更新中…」。
+const SNAP_KEY = 'maotime-inventory-snapshot';
+
+function loadSnapshot(){
+  try{
+    const snap = JSON.parse(localStorage.getItem(SNAP_KEY));
+    if(!snap || !Array.isArray(snap.items) || !snap.savedAt) return null;
+    return snap;
+  }catch(e){ return null; }   // 無痕模式/配額滿/格式壞掉都當成沒有快照
+}
+
+function saveSnapshot(items){
+  try{ localStorage.setItem(SNAP_KEY, JSON.stringify({items, savedAt: Date.now()})); }catch(e){}
+}
+
+// 「3 分鐘前」這種相對說法。超過一天就講日期,不然會變成「1440 分鐘前」。
+function snapshotAge(savedAt){
+  const mins = Math.floor((Date.now()-savedAt)/60000);
+  if(mins < 1)  return '剛剛';
+  if(mins < 60) return mins+' 分鐘前';
+  const hrs = Math.floor(mins/60);
+  if(hrs < 24)  return hrs+' 小時前';
+  return new Date(savedAt).toLocaleDateString('zh-TW',{month:'2-digit',day:'2-digit'})+' 那次';
+}
 let invTabFilter = 'in';
 let invTypeFilter = '';
 let scannedBId = null, scannedRId = null, scannedResId = null;
@@ -657,22 +689,26 @@ async function doRefresh() {
 }
 
 async function loadInventory() {
-  const r = await callAPIAsync({action:'getInventory'});
   const el = document.getElementById('last-update');
+  const r = await callAPIAsync({action:'getInventory'});
   if(r && r.items){
     inventory = r.items;
+    saveSnapshot(r.items);          // 下次開啟就有東西可以先畫
     updateDashboard();
     const now = new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'});
     el.textContent = '上次更新：'+now;
     el.classList.remove('stale');
-  } else {
-    // 讀失敗時**不要**蓋掉時間戳。原本不管成不成功都寫上現在時間，同事會以為
-    // 畫面上是最新庫存，其實是上一次成功時留下的舊資料（2026-09-12 查外借失敗
-    // 時就是靠這個誤判成「資料是新的」）。
-    updateDashboard();
-    el.textContent = '⚠️ 更新失敗（顯示的是舊資料）：' + ((r && r.error) || '連不到伺服器');
-    el.classList.add('stale');
+    return true;
   }
+  // 讀失敗時**不要**蓋掉時間戳。原本不管成不成功都寫上現在時間，同事會以為
+  // 畫面上是最新庫存，其實是上一次成功時留下的舊資料（2026-09-12 查外借失敗
+  // 時就是靠這個誤判成「資料是新的」）。
+  updateDashboard();
+  const snap = loadSnapshot();
+  el.textContent = '⚠️ 更新失敗，畫面上是' + (snap ? snapshotAge(snap.savedAt)+'的舊資料' : '空的')
+    + '：' + ((r && r.error) || '連不到伺服器');
+  el.classList.add('stale');
+  return false;
 }
 
 function updateDashboard() {
@@ -870,7 +906,7 @@ async function submitBorrow(){
   if(!due){alert('請選擇預計歸還日期');return;}
   if(!hasSig('b-sig')){alert('請完成借用人手寫簽名');return;}
   const btn=document.getElementById('b-submit');
-  btn.textContent='上傳中…';btn.disabled=true;
+  btn.textContent='登記外借…';btn.disabled=true;
   const bDate=today();
   const r=await callAPIAsync({action:'borrow',itemId:scannedBId,staff,client,phone,borrowDate:bDate,dueDate:due,note});
   if(!r||!r.success){
@@ -879,12 +915,21 @@ async function submitBorrow(){
       '再決定要不要重登——伺服器有可能已經寫進去，只是回應沒回到手機。');
     btn.textContent='確認外借 →';btn.disabled=false;return;
   }
+  // 外借是兩趟:先寫紀錄(doGet 1~3 秒),再上傳簽名(doPost 4~6 秒)。
+  // 按鈕上要講現在在做哪一趟,不然七八秒的「上傳中…」看起來就是當掉了。
+  btn.textContent='上傳簽名…';
   const sigData=getCanvasWithWhiteBg('b-sig');
-  const sigOk=await uploadSigPost(r.recordId,sigData);
-  if(!sigOk){
-    alert('⚠️ 外借已經登記成功，但簽名沒有上傳成功。\n\n請在下一步按「產生外借憑證」把畫面留存，'+
-      '並回報管理者補上簽名。\n憑證編號：'+(r.recordId||'—'));
-  }
+  await uploadSigPost(r.recordId,sigData);
+
+  // **查證不擋人**:成功畫面先出來,verifySignature 在背景跑(最多約 7 秒)。
+  // 外借紀錄在上一步就已經寫進去了,這裡確認的只是簽名欄,沒有理由讓客戶
+  // 跟同事對著按鈕再等七秒。查不到才出聲。
+  verifySignature(r.recordId,scannedBId).catch(()=>'unknown').then(status=>{
+    if(status!=='ok'){
+      alert('⚠️ 外借已經登記成功，但簽名還沒確認上傳。\n\n請按「產生外借憑證」看一下'+
+        '簽名有沒有出現——有出現就沒事了；沒有才需要回報管理者。\n憑證編號：'+(r.recordId||'—'));
+    }
+  });
   const item=findItem(scannedBId);
   if(item){item.status='out';item.staff=staff;item.client=client;item.phone=phone;item.borrowDate=bDate;item.dueDate=due;}
   document.getElementById('b-success-msg').textContent=scannedBId+'\n借出給 '+client+'（'+phone+'）\n業務：'+staff+'\n預計 '+due+' 前歸還';
@@ -893,7 +938,7 @@ async function submitBorrow(){
     recordId: r.recordId, itemId: scannedBId,
     itemName: document.getElementById('b-item-meta').textContent,
     staff, client, phone, borrowDate: bDate, dueDate: due,
-    sigDataUrl: getCanvasWithWhiteBg('b-sig')
+    sigDataUrl: sigData        // 剛剛上傳的那份,不必再壓一次
   };
   ['b-preview','b-form','b-sig-card'].forEach(id=>document.getElementById(id).classList.remove('show'));
   btn.classList.remove('show');btn.textContent='確認外借 →';btn.disabled=false;
@@ -1621,22 +1666,49 @@ async function callAPIAsync(payload){
   }
 }
 
-// 回傳 true=送出去了、false=連送都沒送成功。
-// 注意：GAS 的 doPost 沒有 CORS 標頭，所以只能用 mode:'no-cors' 送，回應是不透明的
-// （讀不到內容）。因此這裡**只測得出網路層的失敗**，伺服器端寫入失敗仍然看不到。
-// 即使如此也比原本好——原本連網路失敗都只 console.warn，畫面照樣顯示成功。
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+
+// 回傳 'ok'(確認簽名欄真的有值)或 'unknown'(查不到,可能還在寫也可能真的沒進去)。
+//
+// GAS 的 doPost 沒有 CORS 標頭,只能用 mode:'no-cors' 送,**回應是不透明的**——
+// fetch 有沒有 reject 只測得出網路層,伺服器到底存了沒完全讀不到。所以 v40 拿
+// 「fetch 沒炸」當成功、「fetch 炸了」當失敗,兩個方向都會說謊:2026-09-12 之後
+// 同事一直收到「簽名沒有上傳成功」,而 GAS 執行紀錄那幾筆 doPost 全是「已完成」,
+// 簽名其實都存進去了——**誤報,而且害人去找管理者補一個本來就在的簽名**。
+//
+// 改成送完回頭查 getBorrowRecord 的 signatureUrl。這是唯一問得到真相的方法。
 async function uploadSigPost(recordId,sigData){
   const ctl=new AbortController();
   const timer=setTimeout(()=>ctl.abort(),API_TIMEOUT_MS);
   try{
-    await fetch(GAS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify({recordId,sigData}),signal:ctl.signal});
-    return true;
+    // 不帶 Content-Type:no-cors 模式下非安全清單的標頭本來就會被瀏覽器丟掉,
+    // 寫了只是看起來有設。GAS 讀的是 e.postData.contents,不看這個標頭。
+    await fetch(GAS_URL,{method:'POST',mode:'no-cors',body:JSON.stringify({recordId,sigData}),signal:ctl.signal});
   }catch(e){
-    console.warn('簽名上傳失敗：',e);
-    return false;
+    // 送不出去也不在這裡下結論——伺服器有可能已經收到了,只是回應沒回到手機。
+    // 真相一律由 verifySignature 去問。
+    console.warn('簽名上傳請求失敗（仍會回頭確認）：',e);
   }finally{
     clearTimeout(timer);
   }
+}
+
+// 查這筆紀錄的簽名欄到底有沒有值。doPost 要寫 Drive + 試算表,執行紀錄上常態
+// 4~6 秒,所以第一次查不到**不代表失敗**,等一下再查,最多三輪(約 7 秒)。
+// 只有「真的看到 signatureUrl」才回 'ok',其餘一律 'unknown'——寧可說不確定,
+// 也不要像 v40 那樣斬釘截鐵地說錯。
+async function verifySignature(recordId,itemId){
+  for(let i=0;i<3;i++){
+    await sleep(i===0 ? 1500 : 2500);
+    const r = await callAPIAsync({action:'getBorrowRecord', itemId});
+    const rec = r && r.success && r.record;
+    // 比對 recordId,免得抓到同一件衣服**上一次**外借的簽名當成這次的。
+    // 兩邊都拿得到才比:GAS 萬一沒回 recordId,不該因此把「簽名明明在」
+    // 判成失敗——那就繞回 v40 的誤報了。
+    const sameRecord = !recordId || !rec.recordId || rec.recordId===recordId;
+    if(rec && rec.signatureUrl && sameRecord) return 'ok';
+  }
+  return 'unknown';
 }
 
 // ==================== UTILS ====================
@@ -1675,12 +1747,19 @@ function setDateMins(){
 }
 
 // ==================== INIT ====================
-document.getElementById('d-bversion').textContent='…';
-document.getElementById('d-cversion').textContent='…';
-document.getElementById('d-hdt').textContent='…';
-document.getElementById('d-res').textContent='…';
-document.getElementById('d-out').textContent='…';
-document.getElementById('d-overdue').textContent='…';
+// 有快照就先把數字畫出來(畫面立刻有東西),沒有才顯示「…」等第一次讀取。
+// 不論哪一種,loadInventory() 照樣馬上去抓新的。
+const bootSnap = loadSnapshot();
+if(bootSnap){
+  inventory = bootSnap.items;
+  updateDashboard();
+  document.getElementById('last-update').textContent =
+    '資料為'+snapshotAge(bootSnap.savedAt)+'，更新中…';
+} else {
+  ['d-bversion','d-cversion','d-hdt','d-res','d-out','d-overdue']
+    .forEach(id=>document.getElementById(id).textContent='…');
+  document.getElementById('last-update').textContent = '更新中…';
+}
 setDateMins();
 loadInventory();
 // 預先初始化所有簽名 canvas（事件在觸碰時才計算座標，不受 display:none 影響）
@@ -1690,7 +1769,7 @@ loadInventory();
 // 這個值必須與 sw.js 的 CACHE_VERSION **完全一致**:checkVersion() 是抓 sw.js
 // 比對兩邊版本號,不一致就顯示「發現新版本」橫幅。只改其中一邊的話,橫幅會
 // 永遠關不掉(按「立即更新」重載後仍然不一致,又立刻跳出來)。
-const CURRENT_VERSION = 'v42';
+const CURRENT_VERSION = 'v43';
 let pendingWorker = null;
 
 function showUpdateBanner(){
