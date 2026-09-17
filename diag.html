@@ -15,6 +15,10 @@ h2{font-size:15px;margin:20px 0 8px;color:#e0b35c}
 button{width:100%;padding:14px;border:none;border-radius:12px;background:#c1512a;color:#fff;
   font-family:inherit;font-size:16px;font-weight:700;margin-bottom:14px}
 button:disabled{opacity:.5}
+button.alt{background:#3a3a3a}
+.warn{background:#2a2118;border:1px solid #5a4630;border-radius:12px;padding:12px 14px;font-size:13.5px;line-height:1.7;margin-bottom:12px}
+.hist{background:#1a1a1a;border-radius:10px;padding:10px 12px;font-size:12.5px;color:#bbb;margin-bottom:10px}
+.hist b{color:#eee}
 .row{background:#1f1f1f;border-radius:10px;padding:11px 12px;margin-bottom:9px;font-size:13px}
 .row .n{font-weight:700;font-size:14px;margin-bottom:3px}
 .row .d{color:#bbb;font-family:ui-monospace,Menlo,monospace;font-size:12px;word-break:break-all}
@@ -31,10 +35,21 @@ button:disabled{opacity:.5}
 </style>
 </head>
 <body>
-<h1>套量服 連線診斷（第二輪）</h1>
-<div class="sub">驗證「卡住就重打」能不能救回來，並量出到底多常卡住。只做讀取，不寫入任何資料。<br>大約要跑 1～2 分鐘，跑完請整頁截圖。</div>
+<h1>套量服 連線診斷</h1>
+<div class="sub">只做讀取，不寫入任何資料。</div>
+
+<div class="warn">
+  <b>⚠️ 冷啟動測試要先跑，而且要挑「一段時間沒人用」的時候</b><br>
+  例如早上第一件事。只要先跑過下面的「完整測試」，伺服器就被弄暖了，冷啟動就量不到了。
+</div>
+<button id="cold" onclick="runCold()">① 冷啟動測試（只打一發，最多等 60 秒）</button>
+<div id="coldout"></div>
+<div id="hist"></div>
+
+<hr style="border:none;border-top:1px solid #333;margin:22px 0 16px">
+<button id="go" class="alt" onclick="runAll()">② 完整測試（重試策略 + 連打統計，1～2 分鐘）</button>
+<div class="sub" style="margin-top:-6px">這個會把伺服器弄暖，所以一定要在①之後才跑。</div>
 <div class="env" id="env">…</div>
-<button id="go" onclick="runAll()">開始測試</button>
 <div id="out"></div>
 
 <script>
@@ -51,6 +66,7 @@ document.getElementById('env').textContent =
   '\n測試網址：與 App 送出的完全一致（含 &data=%7B%7D）';
 
 const out = document.getElementById('out');
+setTimeout(renderHist, 0);   // 函式定義在下面,等這一輪 script 跑完再畫
 function el(tag, cls, html){ const e=document.createElement(tag); if(cls) e.className=cls; if(html!=null) e.innerHTML=html; out.appendChild(e); return e; }
 function addRow(name){ const e=el('div','row run','<div class="n">'+name+'</div><div class="d">測試中…</div>'); return e; }
 function done(e, good, lines){ e.className='row '+(good?'ok':'bad'); e.querySelector('.d').innerHTML=lines.join('<br>'); }
@@ -90,6 +106,67 @@ function describe(r){
   if(r.ok) return '<span class="g">成功</span> ' + r.ms + ' ms（' + r.items + ' 筆）';
   if(r.timeout) return '<span class="r">卡住</span> ' + r.ms + ' ms（等滿 ' + (TRY_MS/1000) + ' 秒）';
   return '<span class="r">失敗</span> ' + r.ms + ' ms　' + r.err;
+}
+
+// ---------- 冷啟動測試 ----------
+// **不切掉、等到底**(最多 60 秒)。前一輪證明了「8 秒切掉再重打」是最糟的做法:
+// 切掉不會讓 GAS 停下來,重打只是再疊一個上去,冷啟動反而更久。
+// 想量的是「第一個使用者到底要等多久」,所以只打一發、耐心等完。
+// 網址可加 ?cold=8000 縮短上限(開發時驗證用)。
+const COLD_MS = Math.max(1000, Number(new URLSearchParams(location.search).get('cold')) || 60000);
+const HIST_KEY = 'maotime-diag-cold';
+
+function loadHist(){ try{ return JSON.parse(localStorage.getItem(HIST_KEY)) || []; }catch(e){ return []; } }
+function saveHist(h){ try{ localStorage.setItem(HIST_KEY, JSON.stringify(h.slice(-12))); }catch(e){} }
+
+function renderHist(){
+  const h = loadHist();
+  const box = document.getElementById('hist');
+  if(!h.length){ box.innerHTML = ''; return; }
+  box.innerHTML = '<div class="hist"><b>歷次冷啟動紀錄</b>（存在這支手機裡）<br>' +
+    h.slice().reverse().map(x =>
+      new Date(x.at).toLocaleString('zh-TW',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) +
+      '　' + (x.ok ? '<b>' + (x.ms/1000).toFixed(1) + ' 秒</b>' + (x.items!=null ? '（' + x.items + ' 筆）' : '')
+                   : '<span class="r">等滿 ' + (x.ms/1000).toFixed(0) + ' 秒還沒回來</span>')
+    ).join('<br>') + '</div>';
+}
+
+async function runCold(){
+  const btn = document.getElementById('cold');
+  btn.disabled = true; btn.textContent = '等待中…（最多 ' + (COLD_MS/1000) + ' 秒，請不要切走）';
+  const box = document.getElementById('coldout');
+  box.innerHTML = '';
+  const row = document.createElement('div');
+  row.className = 'row run';
+  row.innerHTML = '<div class="n">冷啟動：打一發，等到底</div><div class="d">計時中…</div>';
+  box.appendChild(row);
+
+  const t0 = performance.now();
+  const tick = setInterval(()=>{
+    row.querySelector('.d').textContent = '已經等了 ' + ((performance.now()-t0)/1000).toFixed(0) + ' 秒…';
+  }, 1000);
+
+  const r = await once(INV, COLD_MS);
+  clearInterval(tick);
+
+  const h = loadHist();
+  h.push({at: Date.now(), ms: r.ms, ok: r.ok, items: r.items});
+  saveHist(h); renderHist();
+
+  if(r.ok){
+    done(row, true, [
+      '<span class="big g">' + (r.ms/1000).toFixed(1) + ' 秒</span>　拿到 ' + r.items + ' 筆',
+      r.ms > 20000 ? '→ <b>超過 App 現在的 20 秒上限</b>，這種時候同事就是看到一片空白'
+                   : (r.ms > 6000 ? '→ 比暖機後（2～5 秒）慢一截，但 App 的 20 秒還撐得住'
+                                  : '→ 這一發並不冷。伺服器可能剛被用過，換個時間再測一次'),
+    ]);
+  }else{
+    done(row, false, [
+      '<span class="big r">等滿 ' + (COLD_MS/1000) + ' 秒還沒回來</span>',
+      r.timeout ? '→ 冷啟動比 ' + (COLD_MS/1000) + ' 秒還久，或是卡死了' : r.err,
+    ]);
+  }
+  btn.disabled = false; btn.textContent = '① 冷啟動測試（再測一次）';
 }
 
 async function runAll(){
